@@ -1,0 +1,61 @@
+A ordem de quem joga é decidida por rodadas de dados. A cada rodada, quem tirar o maior valor permanece na posição,
+e se houver empate entre os maiores valores, a rodada será desconsiderada. Como exemplo, considere os jogadores A,
+B, C e D. Todos vão rodar 1 dado.
+Primeira rodada:
+A → 3
+B → 5
+C → 3
+D → 4
+Jogador B ganhou, é definido como o primeiro da ordem de jogadas.
+Segunda rodada:
+A → 4
+C → 4
+D → 1
+Jogadores A e C empataram no maior valor, rodada desconsiderada.
+Terceira rodada:
+A → 2
+C → 3
+D → 6
+Jogador D é decidido como o segundo jogador da ordem de jogadas.
+Quarta rodada:
+A → 5
+C → 4
+Jogador A é decidido como o terceiro na ordem; como sobra apenas 1 jogador (C), ele é definido como o último.
+Portanto, a ordem será B, D, A e C.
+
+Os jogadores possuem uma barra de vida, que inicialmente será de 1000 pontos. Se essa barra chegar a 0, ele será
+eliminado da partida.
+Cartas são definidas em 4 tipos: Ataque, Defesa, Efeito e Condição. E possuem níveis de raridade, sendo eles,
+do menor ao maior, COMUM, INCOMUM, RARA, ÉPICA e LENDÁRIA.
+
+Cartas de ataque podem ser usadas para atacar um determinado adversário, que pode ou não ser de escolha do
+atacante. Ao usar uma carta de ataque, o defensor pode escolher usar ou não uma carta de defesa. Se ele não
+usar nenhuma carta de defesa, ambos rodam 1 dado e, se o número do atacante for maior ou igual ao número do
+defensor, o ataque será bem-sucedido, caso contrário, ele falha e o jogador-alvo não toma dano nenhum. Se o
+defensor usar uma carta de defesa, então pode haver contra-ataque, e para saber o que acontecerá, ambos rodarão
+dados. No caso, o atacante rodará 1 dado e o defensor rodará 2. Se o número do dado do atacante for maior que
+os números dos dados do defensor, o ataque é bem-sucedido e o dano será o dano total da carta de ataque;
+caso contrário, se pelo menos 1 dos números sorteados pelos dados do defensor for maior ou igual ao número
+do dado do atacante, a defesa é bem-sucedida e ocorrerá um contra-ataque conforme o efeito da carta de defesa.
+No caso de haver ataque e defesa ao invés de apenas ataque, a carta perdedora será considerada morta e será
+enviada ao "vácuo", não podendo mais ser utilizada pelo dono a menos que, de alguma maneira, ela seja revivida.
+
+Na sua vez, um jogador pode escolher atacar outro jogador ou comprar uma carta. Se ele já tiver comprado uma carta
+na rodada anterior, ele é obrigado a atacar na atual.
+
+Cartas de efeito podem ser usadas apenas no final da vez do jogador, ou seja, depois de ele ter decidido
+atacar outro jogador ou comprar uma nova carta.
+
+Quando o jogo inicia, todos os jogadores ganham 1 carta de ataque e 1 carta de defesa.
+
+"Descartar" uma carta significa enviá-la de volta à queue numa posição aleatória, podendo ser assim comprada
+novamente, o que é diferente de ser mandada para o vácuo, onde a carta é considerada condicionalmente fora de jogo.
+
+Se um jogador não possui cartas na mão quando a sua vez chega, ele perde 50 pontos de vida, compra uma carta e
+passa a vez. Se ele ainda possuir cartas, mas nenhuma for de ataque e ele está numa rodada em que é obrigado a
+atacar, apenas compra uma carta e passa a vez.
+
+Há uma contagem de quantas vezes os jogadores já atacaram. Quando todos os jogadores atacarem pelo menos 1 vez,
+a contagem zera e todos compram uma carta.
+
+Vence o jogador que sobreviver até o fim e derrotar os demais.
