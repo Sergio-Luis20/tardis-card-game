@@ -25,7 +25,7 @@ Portanto, a ordem será B, D, A e C.
 
 Os jogadores possuem uma barra de vida, que inicialmente será de 1000 pontos. Se essa barra chegar a 0, ele será
 eliminado da partida.
-Cartas são definidas em 4 tipos: Ataque, Defesa, Efeito e Condição. E possuem níveis de raridade, sendo eles,
+Cartas são definidas em 3 tipos: Ataque, Defesa e Efeito. E possuem níveis de raridade, sendo eles,
 do menor ao maior, COMUM, INCOMUM, RARA, ÉPICA e LENDÁRIA.
 
 Cartas de ataque podem ser usadas para atacar um determinado adversário, que pode ou não ser de escolha do

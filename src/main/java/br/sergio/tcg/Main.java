@@ -17,7 +17,11 @@ public class Main {
         }
 
         var service = DiscordService.getInstance();
-        service.registerListener(createSlashCommandListener());
+        var listener = createSlashCommandListener();
+        service.registerSlashCommands(listener.getCommands().values(), true);
+        service.registerListener(listener);
+
+        log.info("Tardis Card Game online!");
 
         // Antes de fazer o boot, é necessário primeiro entender
         // como será o fluxo do jogo, isto é, como uma partida

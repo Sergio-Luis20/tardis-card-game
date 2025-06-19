@@ -1,6 +1,7 @@
-package br.sergio.tcg.model;
+package br.sergio.tcg.model.card;
 
 import br.sergio.tcg.game.GameSession;
+import br.sergio.tcg.model.Player;
 
 import java.awt.image.BufferedImage;
 
@@ -11,7 +12,7 @@ public abstract non-sealed class EffectCard extends Card {
     }
 
     @Override
-    public String getType() {
+    public final String getType() {
         return "Efeito";
     }
 

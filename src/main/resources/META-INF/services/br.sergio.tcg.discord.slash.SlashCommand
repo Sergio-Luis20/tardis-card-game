@@ -2,3 +2,5 @@ br.sergio.tcg.discord.slash.commands.CreateMatchCommand
 br.sergio.tcg.discord.slash.commands.CloseMatchCommand
 br.sergio.tcg.discord.slash.commands.RollDiceCommand
 br.sergio.tcg.discord.slash.commands.HandCommand
+br.sergio.tcg.discord.slash.commands.JoinMatchCommand
+br.sergio.tcg.discord.slash.commands.StartMatchCommand

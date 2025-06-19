@@ -1,96 +1,53 @@
-package br.sergio.tcg.model;
+package br.sergio.tcg.model.card;
 
-import br.sergio.tcg.model.Card.CardDeserializer;
-import br.sergio.tcg.model.Card.CardSerializer;
+import br.sergio.tcg.model.card.Card.CardDeserializer;
+import br.sergio.tcg.model.card.Card.CardSerializer;
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import lombok.EqualsAndHashCode;
-import lombok.EqualsAndHashCode.Exclude;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.*;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
-
-import static java.util.Objects.requireNonNull;
+import java.util.Base64;
+import java.util.Objects;
 
 @Getter
 @ToString
-@EqualsAndHashCode()
+@EqualsAndHashCode
+@RequiredArgsConstructor
 @JsonSerialize(using = CardSerializer.class)
 @JsonDeserialize(using = CardDeserializer.class)
 public abstract sealed class Card permits AttackCard, DefenseCard, EffectCard {
 
-    private static final Map<Long, Card> byId = new ConcurrentHashMap<>();
-    private static final Map<String, Card> byName = new ConcurrentHashMap<>();
-
+    @NonNull
     private String name;
+
+    @NonNull
     private Rarity rarity;
+
+    @NonNull
     private String description;
+
+    @NonNull
     private BufferedImage image;
-
-    @Exclude
-    private long id;
-
-    public Card(String name, Rarity rarity, String description, BufferedImage image) {
-        checkName(name);
-
-        this.name = requireNonNull(name, "name");
-        this.rarity = requireNonNull(rarity, "rarity");
-        this.description = requireNonNull(description, "description");
-        this.image = requireNonNull(image, "image");
-        this.id = generateUniqueId();
-
-        byId.put(id, this);
-        byName.put(name, this);
-    }
 
     public abstract String getType();
 
-    private void checkName(String name) {
-        if (byName.containsKey(name)) {
-            throw new IllegalArgumentException("Card with name \"" + name + "\" already exists");
+    public static BufferedImage getImage(String filename) {
+        var resourceName = "/card-images/" + filename;
+        var stream = Card.class.getResourceAsStream(resourceName);
+        Objects.requireNonNull(stream, "Resource not found: " + resourceName);
+        try (var buff = new BufferedInputStream(stream)) {
+            return ImageIO.read(buff);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to read resource image: " + resourceName, e);
         }
-    }
-
-    public static Optional<Card> findById(long id) {
-        return Optional.ofNullable(byId.get(id));
-    }
-
-    public static Optional<Card> findByName(String name) {
-        return Optional.ofNullable(byName.get(name));
-    }
-
-    public static boolean existsById(long id) {
-        return byId.containsKey(id);
-    }
-
-    public static boolean existsByName(String name) {
-        return byName.containsKey(name);
-    }
-
-    public static Set<Card> cards() {
-        return new HashSet<>(byId.values());
-    }
-
-    public static long generateUniqueId() {
-        var random = ThreadLocalRandom.current();
-        long id;
-        do {
-            id = random.nextLong();
-        } while (byId.containsKey(id));
-        return id;
     }
 
     public static class CardSerializer extends JsonSerializer<Card> {

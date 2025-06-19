@@ -1,4 +1,4 @@
-package br.sergio.tcg.model;
+package br.sergio.tcg.model.card;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,68 +1,107 @@
 package br.sergio.tcg.game;
 
+import br.sergio.tcg.GameLogicException;
+import br.sergio.tcg.InterfaceDriver;
 import br.sergio.tcg.Utils;
-import br.sergio.tcg.model.AttackCard;
-import br.sergio.tcg.model.Card;
-import br.sergio.tcg.model.DefenseCard;
+import br.sergio.tcg.game.event.Event;
+import br.sergio.tcg.game.event.EventListener;
+import br.sergio.tcg.game.event.EventRegistry;
+import br.sergio.tcg.game.event.Registration;
+import br.sergio.tcg.game.query.Query;
+import br.sergio.tcg.game.query.QueryCallback;
+import br.sergio.tcg.game.query.QueryManager;
 import br.sergio.tcg.model.Player;
-import lombok.AllArgsConstructor;
+import br.sergio.tcg.model.card.Card;
+import br.sergio.tcg.model.card.CardRepository;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.dv8tion.jda.api.entities.Member;
 
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
+
+import static java.util.Objects.requireNonNull;
 
 @Slf4j
-@AllArgsConstructor
+@Getter
 public class GameSession {
 
-    public static final int MIN_PLAYERS = 4, MAX_PLAYERS = 8;
-
+    private InterfaceDriver driver;
+    private UUID id;
+    private Player host;
     private List<Player> players;
     private int orderCursor;
-
-    @Getter
-    private Deque<Card> cards;
-
-    @Getter
-    private Player host;
     private boolean started;
-
-    @Getter
+    private Deque<Card> cards;
     private ZonedDateTime creationTime;
+    private DiceOrdering<Player> diceOrdering;
+    private Map<Player, List<Card>> cemetery;
+    private EventRegistry eventRegistry;
+    private QueryManager queryManager;
+    private int minPlayers, maxPlayers;
 
-    @Getter
-    private DiceOrdering diceOrdering;
+    public GameSession(Player host, UUID id, InterfaceDriver driver) {
+        this.host = requireNonNull(host, "host");
+        this.id = requireNonNull(id, "id");
+        this.driver = requireNonNull(driver, "driver");
 
-    @Getter
-    private UUID id;
+        minPlayers = 4;
+        maxPlayers = 8;
 
-    public GameSession(Player host, UUID id) {
-        this.host = host;
-        this.id = id;
-        players = new ArrayList<>();
+        players = Collections.synchronizedList(new ArrayList<>());
         players.add(host);
-        diceOrdering = new DiceOrdering(players);
+
+        cemetery = new HashMap<>();
+        diceOrdering = new DiceOrdering<>(players);
+        eventRegistry = new EventRegistry(this);
+        queryManager = new QueryManager(this);
         creationTime = Utils.dateTime();
     }
 
-    public List<Player> getPlayers() {
-        return Collections.unmodifiableList(players);
-    }
-
-    public boolean containsMember(Member member) {
-        return findPlayer(member) != null;
-    }
-
-    public Player findPlayer(Member member) {
-        for (var player : players) {
-            if (player.getMember().equals(member)) {
-                return player;
-            }
+    public synchronized void configurePlayerAmount(int minPlayers, int maxPlayers) {
+        if (hasStarted()) {
+            throw new IllegalStateException("Already started");
         }
-        return null;
+        if (minPlayers < 2) {
+            throw new IllegalArgumentException("minPlayers must be at least 2");
+        }
+        if (maxPlayers < minPlayers) {
+            throw new IllegalArgumentException("maxPlayers must be at least the same number of minPlayers");
+        }
+        this.minPlayers = minPlayers;
+        this.maxPlayers = maxPlayers;
+    }
+
+    public void log(String message) {
+        driver.sendMessage(this, message).exceptionally(t -> {
+            log.error("Failed to send a message to the game channel", t);
+            return null;
+        });
+    }
+
+    public void logf(String format, Object... args) {
+        log(String.format(format, args));
+    }
+
+    public <E extends Event> Registration<E> listen(Class<E> eventClass, EventListener<E> listener) {
+        return eventRegistry.register(eventClass, listener);
+    }
+
+    public <Q extends Query<R>, R> void query(Q query, QueryCallback<Q, R> callback) {
+        queryManager.query(query, callback);
+    }
+
+    public void kill(Player player, Card deadCard) {
+        if (!player.getHand().remove(deadCard)) {
+            throw new GameLogicException("Card \"" + deadCard.getName() + "\" wasn't in " + player.getName() + "' hand.");
+        }
+        cemetery.get(player).add(deadCard);
+    }
+
+    public void resurrect(Player player, Card deadCard) {
+        if (!cemetery.get(player).remove(deadCard)) {
+            throw new GameLogicException("Card \"" + deadCard.getName() + "\" wasn't in " + player.getName() + "' cemetery.");
+        }
+        player.getHand().add(deadCard);
     }
 
     public void addPlayer(Player player) {
@@ -70,10 +109,30 @@ public class GameSession {
             throw new IllegalStateException("Already started");
         }
         if (players.contains(player)) {
-            log.info("Tried to add a player that is already present in this session: {}", player.getName());
+            log.warn("Tried to add the player \"{}\", but it is already present in this session.", player.getName());
+            return;
+        }
+        if (players.size() >= maxPlayers) {
+            log.warn("Tried to add the player \"{}\", but this match is full.", player.getName());
             return;
         }
         players.add(player);
+        cemetery.put(player, new ArrayList<>());
+    }
+
+    public Optional<Player> findById(UUID playerId) {
+        return players.stream()
+                .filter(player -> player.getId().equals(playerId))
+                .findAny();
+    }
+
+    public void draw(Player player) {
+        var card = cards.poll();
+        if (card == null) {
+            log.warn("Empty deck");
+            return;
+        }
+        player.getHand().add(card);
     }
 
     public synchronized boolean hasStarted() {
@@ -90,8 +149,8 @@ public class GameSession {
             throw new SessionStartException("Already started");
         }
         int size = players.size();
-        if (size < MIN_PLAYERS) {
-            throw new SessionStartException("Minimum amount of players: " + MIN_PLAYERS + ". Current: " + size);
+        if (size < minPlayers) {
+            throw new SessionStartException("Minimum amount of players: " + minPlayers + ". Current: " + size);
         }
     }
 
@@ -120,11 +179,12 @@ public class GameSession {
     }
 
     private void distributeCards() {
-        var cards = new ArrayList<>(Card.cards());
+        var repo = CardRepository.getInstance();
+        var cards = repo.getCards();
         Collections.shuffle(cards);
 
-        var attackCards = byType(cards, AttackCard.class);
-        var defenseCards = byType(cards, DefenseCard.class);
+        var attackCards = repo.getAttackCards();
+        var defenseCards = repo.getDefenseCards();
 
         var removed = new ArrayList<Card>();
 
@@ -138,12 +198,6 @@ public class GameSession {
         Collections.shuffle(cards);
 
         this.cards = new ArrayDeque<>(cards);
-    }
-
-    private List<Card> byType(List<Card> cards, Class<? extends Card> cardClass) {
-        return cards.stream()
-                .filter(card -> card.getClass() == cardClass)
-                .collect(Collectors.toCollection(ArrayList::new));
     }
 
 }

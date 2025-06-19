@@ -1,4 +1,4 @@
-package br.sergio.tcg.model;
+package br.sergio.tcg.model.card;
 
 public enum Rarity {
 

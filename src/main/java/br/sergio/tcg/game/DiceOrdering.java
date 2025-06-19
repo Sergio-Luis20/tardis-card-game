@@ -7,19 +7,19 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-public class DiceOrdering {
+public class DiceOrdering<T extends Player> {
 
-    private List<Player> players;
-    private List<Player> ordered = new ArrayList<>();
+    private List<T> players;
+    private List<T> ordered = new ArrayList<>();
 
     @Getter
-    private Map<Player, Integer> currentRolls = new HashMap<>();
+    private Map<T, Integer> currentRolls = new HashMap<>();
 
-    public DiceOrdering(List<Player> players) {
+    public DiceOrdering(List<T> players) {
         this.players = Objects.requireNonNull(players, "players");
     }
 
-    public boolean submitRoll(Player player, int roll) {
+    public boolean submitRoll(T player, int roll) {
         if (ordered.contains(player)) {
             return false;
         }
@@ -68,14 +68,11 @@ public class DiceOrdering {
         return ordered.size() == players.size();
     }
 
-    public List<Player> getOrderedList() {
-        if (!allOrdersDefined()) {
-            throw new IllegalStateException("Order is not fully defined yet");
-        }
+    public List<T> getOrderedList() {
         return Collections.unmodifiableList(ordered);
     }
 
-    public List<Player> getRemainingPlayers() {
+    public List<T> getRemainingPlayers() {
         return players.stream()
                 .filter(player -> !ordered.contains(player))
                 .collect(Collectors.toCollection(ArrayList::new));
