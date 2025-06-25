@@ -48,6 +48,9 @@ public class Player {
     }
 
     public synchronized void addEffect(StatusEffect effect) {
+        if (!effect.permitsDuplicate() && effects.stream().anyMatch(e -> e.getClass() == effect.getClass())) {
+            return;
+        }
         effects.add(effect);
         effect.whenApplied();
     }

@@ -122,10 +122,21 @@ public class BattleDetails {
             attackCard.action(turn).join();
         }
 
-        // 4. Chamar de volta turn.effectPhaseCard
+        resolve();
+
+        session.sendCardToDeck(attacker, attackCard);
+        session.sendCardToDeck(defender, defenseCard);
+
+        var playerIterator = session.getPlayers().iterator();
+        while (playerIterator.hasNext()) {
+            var player = playerIterator.next();
+            if (player.isDead()) {
+                turn.logf("%s morreu!", player.getBoldName());
+                playerIterator.remove();
+            }
+        }
 
         if (attacker.isDead()) {
-            turn.logf("%s morreu!", attacker.getBoldName());
             return;
         }
 

@@ -38,11 +38,12 @@ public class GameSession {
     private UUID id;
     private Player host;
     private List<Player> players;
+    private Set<Player> attacked;
     private Map<Player, Boolean> lastTimeAttacked;
     private int orderCursor;
     private volatile TurnDetails currentTurn;
     private boolean started;
-    private LinkedList<Card> cards;
+    private LinkedList<Card> deck;
     private ZonedDateTime creationTime;
     private DiceOrdering diceOrdering;
     private EventRegistry eventRegistry;
@@ -64,6 +65,7 @@ public class GameSession {
 
         players = Collections.synchronizedList(new ArrayList<>());
         players.add(host);
+        attacked = ConcurrentHashMap.newKeySet();
         lastTimeAttacked = new ConcurrentHashMap<>();
         lastTimeAttacked.put(host, false);
 
@@ -76,8 +78,12 @@ public class GameSession {
     public void sendCardToDeck(Player player, Card card) {
         player.getHand().remove(card);
         player.getTheVoid().remove(card);
-        int index = ThreadLocalRandom.current().nextInt(cards.size());
-        cards.add(index, card);
+        if (deck.isEmpty()) {
+            deck.add(card);
+        } else {
+            int index = ThreadLocalRandom.current().nextInt(deck.size());
+            deck.add(index, card);
+        }
     }
 
     public boolean containsMember(Member member) {
@@ -212,7 +218,7 @@ public class GameSession {
     }
 
     public boolean draw(Player player) {
-        var card = cards.poll();
+        var card = deck.poll();
         if (card == null) {
             log.warn("Empty deck");
             return false;
@@ -250,6 +256,13 @@ public class GameSession {
     }
 
     public void startTurn() {
+        if (attacked.containsAll(players)) {
+            attacked.clear();
+            log("Todos compram 1 carta!");
+            for (var player : players) {
+                draw(player);
+            }
+        }
         var player = currentPlayer();
         logf("Iniciando turno de %s.", player.getBoldName());
         if (player.getHand().isEmpty()) {
@@ -306,6 +319,7 @@ public class GameSession {
                         currentTurn.startTurn();
                     });
                     lastTimeAttacked.put(player, true);
+                    attacked.add(player);
                 }
                 case drawCard -> {
                     currentTurn = TurnDetails.pacific(this, player);
@@ -355,7 +369,7 @@ public class GameSession {
         cards.removeAll(removed);
         Collections.shuffle(cards);
 
-        this.cards = new LinkedList<>(cards);
+        this.deck = new LinkedList<>(cards);
     }
 
 }

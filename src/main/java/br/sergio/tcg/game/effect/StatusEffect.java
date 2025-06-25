@@ -16,4 +16,8 @@ public interface StatusEffect {
     default void whenRemoved() {
     }
 
+    default boolean permitsDuplicate() {
+        return true;
+    }
+
 }

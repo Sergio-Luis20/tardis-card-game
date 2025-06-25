@@ -33,4 +33,9 @@ public class TurnSkipEffect implements StatusEffect {
         return turns == 0;
     }
 
+    @Override
+    public boolean permitsDuplicate() {
+        return false;
+    }
+
 }
