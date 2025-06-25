@@ -7,16 +7,19 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class EventRegistry {
 
-    private GameSession<?> session;
+    private GameSession session;
     private Map<Class<?>, List<EventListener<?>>> listeners;
 
-    public EventRegistry(GameSession<?> session) {
+    public EventRegistry(GameSession session) {
         this.session = Objects.requireNonNull(session, "session");
         listeners = new ConcurrentHashMap<>();
     }
 
     public <T extends Event> Registration<T> register(Class<T> eventClass, EventListener<T> listener) {
-        get(eventClass).add(listener);
+        var listeners = get(eventClass);
+        if (!listeners.contains(listener)) {
+            listeners.add(listener);
+        }
         return new Registration<>(session, eventClass, listener);
     }
 
@@ -34,6 +37,10 @@ public class EventRegistry {
 
     public void unregister(Registration<?> registration) {
         get(registration.eventClass()).remove(registration.listener());
+    }
+
+    public <T extends Event> void unregister(Class<T> eventClass, EventListener<T> listener) {
+        get(eventClass).remove(listener);
     }
 
     public void unregisterAll() {

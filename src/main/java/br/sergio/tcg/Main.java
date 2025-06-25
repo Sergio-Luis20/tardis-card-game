@@ -7,9 +7,14 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.ServiceLoader;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class Main {
+
+    public static final ExecutorService VIRTUAL;
 
     public static void main(String[] args) {
         if (!DiscordService.init()) {
@@ -38,6 +43,23 @@ public class Main {
             log.info("Loaded command: {}", cmd.getName());
         });
         return new SlashCommandListener(commands);
+    }
+
+    static {
+        VIRTUAL = Executors.newVirtualThreadPerTaskExecutor();
+        Runtime.getRuntime().addShutdownHook(Thread.ofVirtual().unstarted(() -> {
+            VIRTUAL.shutdown();
+            try {
+                if (!VIRTUAL.awaitTermination(5, TimeUnit.SECONDS)) {
+                    VIRTUAL.shutdownNow();
+                    log.warn("VIRTUAL main thread executor service timed out on normal shutdown and was forcibly closed.");
+                } else {
+                    log.info("VIRTUAL main thread executor service closed gracefully.");
+                }
+            } catch (InterruptedException e) {
+                log.error("Interrupted while waiting for the VIRTUAL main thread executor service to shutdown.", e);
+            }
+        }));
     }
 
 }

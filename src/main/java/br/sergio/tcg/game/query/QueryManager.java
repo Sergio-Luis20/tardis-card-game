@@ -14,7 +14,7 @@ import java.util.Map;
 public class QueryManager {
 
     @NonNull
-    private GameSession<?> session;
+    private GameSession session;
 
     private Map<Query<?>, QueryCallback<? extends Query<?>, ?>> callbacks = Collections.synchronizedMap(new IdentityHashMap<>());
 
@@ -30,6 +30,16 @@ public class QueryManager {
             ((QueryCallback<? super Query<T>, T>) callback).onResult(query, result);
         } else {
             log.warn("No callback found for query: {}", query);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> void completeExceptionally(Query<T> query, Throwable throwable) {
+        var callback = callbacks.remove(query);
+        if (callback != null) {
+            ((QueryCallback<? super Query<T>, T>) callback).onError(query, throwable);
+        } else {
+            log.warn("No callback found for query: {} on exceptionally completion.", query, throwable);
         }
     }
 

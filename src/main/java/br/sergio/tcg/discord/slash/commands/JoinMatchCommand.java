@@ -3,8 +3,7 @@ package br.sergio.tcg.discord.slash.commands;
 import br.sergio.tcg.discord.DiscordService;
 import br.sergio.tcg.discord.slash.Option;
 import br.sergio.tcg.discord.slash.SlashCommand;
-import br.sergio.tcg.game.GameSession;
-import br.sergio.tcg.model.Player;
+import br.sergio.tcg.game.Player;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
@@ -36,12 +35,14 @@ public class JoinMatchCommand extends SlashCommand {
             event.reply("A partida de " + host.getEffectiveName() + " já começou.").setEphemeral(true).queue();
             return;
         }
-        if (session.getPlayers().size() == GameSession.MAX_PLAYERS) {
+        if (session.getPlayers().size() == session.getMaxPlayers()) {
             event.reply("A partida de " + host.getEffectiveName() + " está cheia.").setEphemeral(true).queue();
             return;
         }
-        session.addPlayer(new Player(member));
-        event.getChannel().sendMessage("» **" + member.getEffectiveName() + "** entrou na partida de **" + session.getHost().getName() + "** (" + session.getId() + ")!").queue();
+        consumeInteraction(event);
+        var newPlayer = new Player(member);
+        session.addPlayer(newPlayer);
+        session.logf("» %s entrou na partida de %s (%d/%d)!", newPlayer.getBoldName(), session.getHost().getBoldName(), session.getPlayers().size(), session.getMaxPlayers());
     }
 
     @Override

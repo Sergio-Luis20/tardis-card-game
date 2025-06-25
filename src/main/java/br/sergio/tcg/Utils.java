@@ -1,11 +1,15 @@
 package br.sergio.tcg;
 
-import br.sergio.tcg.model.card.Card;
-import br.sergio.tcg.model.card.CardRepository;
-import br.sergio.tcg.model.card.NotACardClassException;
+import br.sergio.tcg.game.card.Card;
+import br.sergio.tcg.game.card.CardRepository;
+import br.sergio.tcg.game.card.NotACardClassException;
 import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.utils.FileUpload;
 
 import java.awt.*;
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -74,6 +78,18 @@ public final class Utils {
     public static void nonNull(Object... objects) {
         for (var obj : objects) {
             Objects.requireNonNull(obj);
+        }
+    }
+
+    public static FileUpload loadResource(String resourceLocation) {
+        var stream = Utils.class.getResourceAsStream(resourceLocation);
+        if (stream == null) {
+            throw new RuntimeException("Resource not found: " + resourceLocation);
+        }
+        try (var buf = new BufferedInputStream(stream)) {
+            return FileUpload.fromData(buf.readAllBytes(), "coin.gif");
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to read resource " + resourceLocation, e);
         }
     }
 

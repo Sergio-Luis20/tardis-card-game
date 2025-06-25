@@ -1,12 +1,13 @@
 package br.sergio.tcg.discord;
 
 import br.sergio.tcg.Utils;
-import br.sergio.tcg.model.card.Card;
-import br.sergio.tcg.model.Player;
+import br.sergio.tcg.game.Player;
+import br.sergio.tcg.game.card.Card;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.MessageEmbed;
 
 import javax.imageio.ImageIO;
+import java.awt.*;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -14,37 +15,31 @@ import java.util.Base64;
 
 public class EmbedFactory {
 
-    public MessageEmbed createRollEmbed(Player player, int roll) {
-        if (!(player instanceof DiscordPlayer discordPlayer)) {
-            throw new IllegalArgumentException("Player must be an instance of DiscordPlayer");
-        }
-
+    public ImageEmbed createRollEmbed(Player player, int roll) {
         var embed = new EmbedBuilder();
 
         var name = player.getName();
 
-        embed.setAuthor(name, null, discordPlayer.getAvatarUrl());
+        embed.setAuthor(name, null, player.getAvatarUrl());
         embed.setTitle("\uD83C\uDFB2 " + name + " rolou o dado!");
         embed.setDescription(name + " tirou **" + roll + "** no dado!");
         embed.setColor(player.getColor());
 
-        return embed.build();
+        return new ImageEmbed(embed.build());
     }
 
-    public CardEmbed createCardEmbed(Card card) {
+    public ImageEmbed createCardEmbed(Card card) {
         return createCardEmbed(null, card);
     }
 
-    public CardEmbed createCardEmbed(Player cardOwner, Card card) {
+    public ImageEmbed createCardEmbed(Player cardOwner, Card card) {
         var embed = new EmbedBuilder();
 
         if (cardOwner == null) {
             var bot = DiscordService.getInstance().getJda().getSelfUser();
             embed.setAuthor(bot.getEffectiveName(), null, bot.getEffectiveAvatarUrl());
-        } else if (cardOwner instanceof DiscordPlayer discordPlayer) {
-            embed.setAuthor(cardOwner.getName(), null, discordPlayer.getAvatarUrl());
         } else {
-            throw new IllegalArgumentException("Player must be an instance of DiscordPlayer");
+            embed.setAuthor(cardOwner.getName(), null, cardOwner.getAvatarUrl());
         }
 
         embed.setTitle(card.getName());
@@ -63,14 +58,32 @@ public class EmbedFactory {
         embed.setImage("attachment://" + filename);
 
         var stream = new ByteArrayOutputStream();
-        try {
-            ImageIO.write(card.getImage(), "png", stream);
-            stream.close();
+        try (var buf = new BufferedOutputStream(stream)) {
+            ImageIO.write(card.getImage(), "png", buf);
         } catch (IOException e) {
             throw new RuntimeException("Failed to write card image to buffer", e);
         }
 
-        return new CardEmbed(embed.build(), stream.toByteArray(), filename);
+        return new ImageEmbed(embed.build(), stream.toByteArray(), filename);
+    }
+
+    public ImageEmbed createIntegerEmbed(int n) {
+        var embed = new EmbedBuilder();
+
+        embed.setDescription(Integer.toString(n));
+        embed.setColor(Color.WHITE);
+
+        return new ImageEmbed(embed.build());
+    }
+
+    public ImageEmbed createPlayerEmbed(Player player) {
+        var embed = new EmbedBuilder();
+
+        embed.setTitle(player.getName());
+        embed.setImage(player.getAvatarUrl());
+        embed.setColor(player.getColor());
+
+        return new ImageEmbed(embed.build());
     }
 
 }

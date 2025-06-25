@@ -5,7 +5,7 @@ import br.sergio.tcg.discord.DiscordService;
 import br.sergio.tcg.discord.slash.SlashCommand;
 import br.sergio.tcg.game.DiceOrdering;
 import br.sergio.tcg.game.GameSession;
-import br.sergio.tcg.model.Player;
+import br.sergio.tcg.game.Player;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
@@ -35,7 +35,7 @@ public class RollDiceCommand extends SlashCommand {
             return;
         }
         var diceOrdering = session.getDiceOrdering();
-        var player = session.findPlayer(member);
+        var player = session.findByMember(member).orElseThrow();
         if (!diceOrdering.allOrdersDefined()) {
             onOrdering(session, diceOrdering, player, event);
         } else {
@@ -43,7 +43,8 @@ public class RollDiceCommand extends SlashCommand {
         }
     }
 
-    private void onOrdering(GameSession session, DiceOrdering diceOrdering, Player player, SlashCommandInteractionEvent event) {
+    private void onOrdering(GameSession session, DiceOrdering diceOrdering,
+                            Player player, SlashCommandInteractionEvent event) {
         if (diceOrdering.getOrderedList().contains(player)) {
             event.reply("Você já tem sua posição definida.").setEphemeral(true).queue();
             return;
@@ -63,14 +64,14 @@ public class RollDiceCommand extends SlashCommand {
         var selfUser = service.getJda().getSelfUser();
         var embed = service.getEmbedFactory().createRollEmbed(player, roll);
 
-        event.replyEmbeds(embed).queue(success -> {
+        event.replyEmbeds(embed.embed()).queue(success -> {
             var ch = event.getChannel();
 
             if (!diceOrdering.isRoundReady()) {
                 return;
             }
             if (!diceOrdering.resolveRound()) {
-                event.getChannel().sendMessageEmbeds(
+                ch.sendMessageEmbeds(
                         new EmbedBuilder()
                                 .setAuthor(selfUser.getEffectiveName(), null, selfUser.getEffectiveAvatarUrl())
                                 .setTitle("⚠️ Rodada empatada!")
@@ -122,6 +123,34 @@ public class RollDiceCommand extends SlashCommand {
 
     private void onNormalRoll(GameSession session, Player player, SlashCommandInteractionEvent event) {
         // Aqui é para quando os jogadores rolam dados durante o jogo
+        var turn = session.getCurrentTurn();
+        if (turn.isPacific()) {
+            event.reply("O turno não é de batalha.").setEphemeral(true).queue();
+        } else if (turn.getBattleDetails().isRollDicePhase()) {
+            event.reply("Não está na hora de rolar dados.").setEphemeral(true).queue();
+        } else if (turn.getAttacker().equals(player)) {
+            var battle = turn.getBattleDetails();
+            if (battle.getAttackerRoll() != 0) {
+                event.reply("Você já rolou o dado.").setEphemeral(true).queue();
+            } else {
+                int roll = Utils.rollDice();
+                var rollEmbed = DiscordService.getInstance().getEmbedFactory().createRollEmbed(player, roll);
+                event.replyEmbeds(rollEmbed.embed()).queue();
+                battle.setAttackerRoll(roll);
+            }
+        } else if (turn.getDefender().equals(player)) {
+            var battle = turn.getBattleDetails();
+            if (battle.getDefenderRoll() != 0) {
+                event.reply("Você já rolou o dado.").setEphemeral(true).queue();
+            } else {
+                int roll = Utils.rollDice();
+                var rollEmbed = DiscordService.getInstance().getEmbedFactory().createRollEmbed(player, roll);
+                event.replyEmbeds(rollEmbed.embed()).queue();
+                battle.setDefenderRoll(roll);
+            }
+        } else {
+            event.reply("Você não participa deste turno.").setEphemeral(true).queue();
+        }
     }
 
     private MessageEmbed getDefinedPosition(SelfUser selfUser, Player winner, int pos) {

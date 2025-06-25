@@ -1,23 +1,31 @@
 package br.sergio.tcg.game;
 
-import br.sergio.tcg.GameLogicException;
-import br.sergio.tcg.InterfaceDriver;
 import br.sergio.tcg.Utils;
+import br.sergio.tcg.discord.DiscordService;
+import br.sergio.tcg.discord.ImageEmbed;
+import br.sergio.tcg.game.card.AttackCard;
+import br.sergio.tcg.game.card.Card;
+import br.sergio.tcg.game.card.CardRepository;
 import br.sergio.tcg.game.event.Event;
 import br.sergio.tcg.game.event.EventListener;
 import br.sergio.tcg.game.event.EventRegistry;
 import br.sergio.tcg.game.event.Registration;
+import br.sergio.tcg.game.event.events.PlayerDamageEvent;
 import br.sergio.tcg.game.query.Query;
 import br.sergio.tcg.game.query.QueryCallback;
 import br.sergio.tcg.game.query.QueryManager;
-import br.sergio.tcg.model.Player;
-import br.sergio.tcg.model.card.Card;
-import br.sergio.tcg.model.card.CardRepository;
+import br.sergio.tcg.game.query.queries.ChooseQuery;
+import br.sergio.tcg.game.query.queries.SelectOneQuery;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
@@ -25,36 +33,61 @@ import static java.util.Objects.requireNonNull;
 @Getter
 public class GameSession {
 
-    private InterfaceDriver driver;
+    public static final int MIN_PLAYERS = 2, MAX_PLAYERS = 8;
+
     private UUID id;
     private Player host;
     private List<Player> players;
+    private Map<Player, Boolean> lastTimeAttacked;
     private int orderCursor;
+    private volatile TurnDetails currentTurn;
     private boolean started;
-    private Deque<Card> cards;
+    private LinkedList<Card> cards;
     private ZonedDateTime creationTime;
-    private DiceOrdering<Player> diceOrdering;
-    private Map<Player, List<Card>> cemetery;
+    private DiceOrdering diceOrdering;
     private EventRegistry eventRegistry;
     private QueryManager queryManager;
+    private MessageChannel gameChannel;
     private int minPlayers, maxPlayers;
 
-    public GameSession(Player host, UUID id, InterfaceDriver driver) {
+    public GameSession(Player host, UUID id, MessageChannel gameChannel) {
+        this(host, id, gameChannel, MIN_PLAYERS, MAX_PLAYERS);
+    }
+
+    public GameSession(Player host, UUID id, MessageChannel gameChannel, int minPlayers, int maxPlayers) {
         this.host = requireNonNull(host, "host");
         this.id = requireNonNull(id, "id");
-        this.driver = requireNonNull(driver, "driver");
+        this.gameChannel = requireNonNull(gameChannel, "gameChannel");
 
-        minPlayers = 4;
-        maxPlayers = 8;
+        this.minPlayers = Math.max(minPlayers, MIN_PLAYERS);
+        this.maxPlayers = Math.min(maxPlayers, MAX_PLAYERS);
 
         players = Collections.synchronizedList(new ArrayList<>());
         players.add(host);
+        lastTimeAttacked = new ConcurrentHashMap<>();
+        lastTimeAttacked.put(host, false);
 
-        cemetery = new HashMap<>();
-        diceOrdering = new DiceOrdering<>(players);
+        diceOrdering = new DiceOrdering(players);
         eventRegistry = new EventRegistry(this);
         queryManager = new QueryManager(this);
         creationTime = Utils.dateTime();
+    }
+
+    public void sendCardToDeck(Player player, Card card) {
+        player.getHand().remove(card);
+        player.getTheVoid().remove(card);
+        int index = ThreadLocalRandom.current().nextInt(cards.size());
+        cards.add(index, card);
+    }
+
+    public boolean containsMember(Member member) {
+        return findByMember(member).isPresent();
+    }
+
+    public Optional<Player> findByMember(Member member) {
+        return players.stream()
+                .filter(player -> player.getMember().equals(member))
+                .findAny();
     }
 
     public synchronized void configurePlayerAmount(int minPlayers, int maxPlayers) {
@@ -72,14 +105,86 @@ public class GameSession {
     }
 
     public void log(String message) {
-        driver.sendMessage(this, message).exceptionally(t -> {
+        gameChannel.sendMessage(message).queue(null, t -> {
             log.error("Failed to send a message to the game channel", t);
-            return null;
         });
     }
 
     public void logf(String format, Object... args) {
         log(String.format(format, args));
+    }
+
+    public void showCard(Player cardOwner, Card card) {
+        var cardEmbed = DiscordService.getInstance().getEmbedFactory().createCardEmbed(cardOwner, card);
+        if (cardOwner != null) {
+            cardEmbed.fill(gameChannel.sendMessage(cardOwner.getBoldName() + " jogou a seguinte carta:")).queue();
+        } else {
+            cardEmbed.sendEmbed(gameChannel).queue();
+        }
+    }
+
+    public void revealCards(Player revealer, List<Card> cards) {
+        // revela cartas publicamente para todos no chat do jogo
+        if (cards.isEmpty()) {
+            if (revealer == null) {
+                log("Nenhuma carta foi revelada!");
+            } else {
+                logf("Nenhuma carta de %s foi revelada!", revealer.getBoldName());
+            }
+            return;
+        }
+        var cardEmbeds = cards.stream()
+                .map(card -> DiscordService.getInstance().getEmbedFactory().createCardEmbed(revealer, card))
+                .toList();
+        if (revealer == null) {
+            ImageEmbed.fill(gameChannel.sendMessage("A(s) seguinte(s) carta(s) foi(ram) revelada(s):"), cardEmbeds)
+                    .queue(null, t -> log.error("Failed to reveal cards of {}", null, t));
+        } else {
+            ImageEmbed.fill(gameChannel.sendMessage("A(s) seguinte(s) carta(s) de " + revealer.getBoldName() + " foi(ram) revelada(s):"), cardEmbeds)
+                    .queue(null, t -> log.error("Failed to reveal cards of {}", revealer.getName(), t));
+        }
+    }
+
+    public void revealCards(Player revealer, List<Card> cards, Set<Player> viewers) {
+        // revela cartas privadamente apenas para os jogadores do set
+        if (cards.isEmpty()) {
+            if (viewers.isEmpty()) {
+                if (revealer == null) {
+                    log("Nenhuma carta foi revelada!");
+                } else {
+                    logf("Nenhuma carta de %s foi revelada!", revealer.getBoldName());
+                }
+                return;
+            }
+            for (var viewer : viewers) {
+                viewer.getMember().getUser().openPrivateChannel().queue(pv -> {
+                    if (revealer == null) {
+                        pv.sendMessage("Nenhuma carta foi revelada para você!").queue();
+                    } else {
+                        pv.sendMessage("Nenhuma carta de " + revealer.getBoldName() + " foi revelada para você!").queue();
+                    }
+                }, t -> log.error("Failed to retrieve private channel of {}", viewer.getName(), t));
+            }
+            return;
+        }
+        if (viewers.isEmpty()) {
+            revealCards(revealer, cards);
+            return;
+        }
+        var cardEmbeds = cards.stream()
+                .map(card -> DiscordService.getInstance().getEmbedFactory().createCardEmbed(revealer, card))
+                .toList();
+        for (var viewer : viewers) {
+            viewer.getMember().getUser().openPrivateChannel().queue(pv -> {
+                if (revealer == null) {
+                    ImageEmbed.fill(pv.sendMessage("A(s) seguinte(s) carta(s) foi(ram) revelada(s):"), cardEmbeds)
+                            .queue(null, t -> log.error("Failed to reveal card of {} to {}", null, viewer.getName()));
+                } else {
+                    ImageEmbed.fill(pv.sendMessage("A(s) seguinte(s) carta(s) de " + revealer.getBoldName() + " foi(ram) revelada(s) para você:"), cardEmbeds)
+                            .queue(null, t -> log.error("Failed to reveal card of {} to {}", revealer.getName(), viewer.getName()));
+                }
+            }, t -> log.error("Failed to retrieve private channel of {}", viewer.getName(), t));
+        }
     }
 
     public <E extends Event> Registration<E> listen(Class<E> eventClass, EventListener<E> listener) {
@@ -88,20 +193,6 @@ public class GameSession {
 
     public <Q extends Query<R>, R> void query(Q query, QueryCallback<Q, R> callback) {
         queryManager.query(query, callback);
-    }
-
-    public void kill(Player player, Card deadCard) {
-        if (!player.getHand().remove(deadCard)) {
-            throw new GameLogicException("Card \"" + deadCard.getName() + "\" wasn't in " + player.getName() + "' hand.");
-        }
-        cemetery.get(player).add(deadCard);
-    }
-
-    public void resurrect(Player player, Card deadCard) {
-        if (!cemetery.get(player).remove(deadCard)) {
-            throw new GameLogicException("Card \"" + deadCard.getName() + "\" wasn't in " + player.getName() + "' cemetery.");
-        }
-        player.getHand().add(deadCard);
     }
 
     public void addPlayer(Player player) {
@@ -117,22 +208,17 @@ public class GameSession {
             return;
         }
         players.add(player);
-        cemetery.put(player, new ArrayList<>());
+        lastTimeAttacked.put(player, false);
     }
 
-    public Optional<Player> findById(UUID playerId) {
-        return players.stream()
-                .filter(player -> player.getId().equals(playerId))
-                .findAny();
-    }
-
-    public void draw(Player player) {
+    public boolean draw(Player player) {
         var card = cards.poll();
         if (card == null) {
             log.warn("Empty deck");
-            return;
+            return false;
         }
         player.getHand().add(card);
+        return true;
     }
 
     public synchronized boolean hasStarted() {
@@ -160,6 +246,74 @@ public class GameSession {
         }
         players = diceOrdering.getOrderedList();
         distributeCards();
+        startTurn();
+    }
+
+    public void startTurn() {
+        var player = currentPlayer();
+        logf("Iniciando turno de %s.", player.getBoldName());
+        if (player.getHand().isEmpty()) {
+            var damage = new AttributeInstance(50);
+            var event = new PlayerDamageEvent(null, player, damage);
+            eventRegistry.callEvent(event);
+            int damageValue = (int) event.getDamage().calculate();
+            player.subtractHp(damageValue);
+            draw(player);
+            lastTimeAttacked.put(player, false);
+            logf("%s não tinha cartas na mão, por isso perdeu %d de vida, comprou uma carta e pulou a vez.", player.getBoldName(), damageValue);
+            nextTurn();
+            startTurn();
+            return;
+        }
+        if (player.getHand().stream().noneMatch(AttackCard.class::isInstance)) {
+            if (lastTimeAttacked.get(player)) {
+                lastTimeAttacked.put(player, false);
+                logf("%s não possui cartas de ataque, portanto em seu turno ele obrigatoriamente comprou uma carta.");
+                currentTurn = TurnDetails.pacific(this, player);
+                currentTurn.startTurn();
+            } else {
+                draw(player);
+                logf("%s não possui cartas de ataque numa rodada em que deve atacar, portanto comprou uma carta e passou a vez.", player.getBoldName());
+                nextTurn();
+                startTurn();
+            }
+            return;
+        }
+        final var attack = "\uD83D\uDD2A Atacar";
+        final var drawCard = "\uD83C\uDCCF Comprar carta";
+        var query = new ChooseQuery<>(
+                player,
+                "Sua vez, " + player.getBoldName() + "! Escolha o que fazer:",
+                List.of(attack, drawCard),
+                false,
+                Function.identity()
+        );
+        query(query, (q, action) -> {
+            switch (action) {
+                case attack -> {
+                    var players = new ArrayList<>(getPlayers());
+                    players.remove(player);
+                    var playerQuery = new SelectOneQuery<>(
+                            player,
+                            "Escolha quem atacar",
+                            players,
+                            false,
+                            false,
+                            DiscordService.getInstance().getEmbedFactory()::createPlayerEmbed
+                    );
+                    query(playerQuery, (pq, target) -> {
+                        currentTurn = TurnDetails.battle(this, player, target);
+                        currentTurn.startTurn();
+                    });
+                    lastTimeAttacked.put(player, true);
+                }
+                case drawCard -> {
+                    currentTurn = TurnDetails.pacific(this, player);
+                    currentTurn.startTurn();
+                }
+                default -> throw new AssertionError("No recognized option on choose query.");
+            }
+        });
     }
 
     public void nextTurn() {
@@ -197,7 +351,7 @@ public class GameSession {
         cards.removeAll(removed);
         Collections.shuffle(cards);
 
-        this.cards = new ArrayDeque<>(cards);
+        this.cards = new LinkedList<>(cards);
     }
 
 }

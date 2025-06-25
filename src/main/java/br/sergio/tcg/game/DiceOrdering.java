@@ -1,25 +1,25 @@
 package br.sergio.tcg.game;
 
-import br.sergio.tcg.model.Player;
 import lombok.Getter;
 
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-public class DiceOrdering<T extends Player> {
+public class DiceOrdering {
 
-    private List<T> players;
-    private List<T> ordered = new ArrayList<>();
+    private List<Player> players;
+    private List<Player> ordered = Collections.synchronizedList(new ArrayList<>());
 
     @Getter
-    private Map<T, Integer> currentRolls = new HashMap<>();
+    private Map<Player, Integer> currentRolls = new ConcurrentHashMap<>();
 
-    public DiceOrdering(List<T> players) {
-        this.players = Objects.requireNonNull(players, "players");
+    public DiceOrdering(List<Player> players) {
+        this.players = Collections.synchronizedList(Objects.requireNonNull(players, "players"));
     }
 
-    public boolean submitRoll(T player, int roll) {
+    public boolean submitRoll(Player player, int roll) {
         if (ordered.contains(player)) {
             return false;
         }
@@ -37,6 +37,9 @@ public class DiceOrdering<T extends Player> {
     }
 
     public boolean resolveRound() {
+        if (allOrdersDefined()) {
+            return true;
+        }
         if (!isRoundReady()) {
             throw new IllegalStateException("Not everyone rolled dice on this round");
         }
@@ -68,11 +71,11 @@ public class DiceOrdering<T extends Player> {
         return ordered.size() == players.size();
     }
 
-    public List<T> getOrderedList() {
+    public List<Player> getOrderedList() {
         return Collections.unmodifiableList(ordered);
     }
 
-    public List<T> getRemainingPlayers() {
+    public List<Player> getRemainingPlayers() {
         return players.stream()
                 .filter(player -> !ordered.contains(player))
                 .collect(Collectors.toCollection(ArrayList::new));

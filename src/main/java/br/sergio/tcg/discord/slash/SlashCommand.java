@@ -42,6 +42,10 @@ public abstract class SlashCommand {
 
     public abstract void onCommand(SlashCommandInteractionEvent event, Member member);
 
+    protected void consumeInteraction(SlashCommandInteractionEvent event) {
+        event.reply("✅ Interação consumida com êxito!").setEphemeral(true).queue();
+    }
+
     public SlashCommandData slashData() {
         var data = Commands.slash(name, description);
         var options = options();

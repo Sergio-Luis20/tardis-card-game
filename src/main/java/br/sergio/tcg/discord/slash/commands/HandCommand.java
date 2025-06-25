@@ -1,6 +1,6 @@
 package br.sergio.tcg.discord.slash.commands;
 
-import br.sergio.tcg.discord.CardEmbed;
+import br.sergio.tcg.discord.ImageEmbed;
 import br.sergio.tcg.discord.DiscordService;
 import br.sergio.tcg.discord.slash.SlashCommand;
 import lombok.extern.slf4j.Slf4j;
@@ -25,16 +25,19 @@ public class HandCommand extends SlashCommand {
             return;
         }
         var session = opt.get();
-        var player = session.findPlayer(member);
+        var player = session.findByMember(member).orElseThrow();
         var hand = player.getHand();
         var embedFactory = service.getEmbedFactory();
-        var cardEmbeds = new ArrayList<CardEmbed>(hand.size());
+        var cardEmbeds = new ArrayList<ImageEmbed>(hand.size());
         for (var card : hand) {
             cardEmbeds.add(embedFactory.createCardEmbed(player, card));
         }
-        member.getUser().openPrivateChannel().queue(channel -> CardEmbed.sendAll(channel, cardEmbeds), t -> {
-            log.error("Failed to get private channel of {}", member.getEffectiveName(), t);
-        });
+        consumeInteraction(event);
+        member.getUser().openPrivateChannel().queue(pv -> {
+            for (var embed : cardEmbeds) {
+                embed.sendEmbed(pv).queue(null, t -> log.error("Failed to send card embed to {}", player.getName()));
+            }
+        }, t -> log.error("Failed to get private channel of {}", player.getName()));
     }
 
 }
