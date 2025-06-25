@@ -4,8 +4,6 @@ target/
 !**/src/test/**/target/
 
 .env
-card-images/
-gifs/
 
 ### IntelliJ IDEA ###
 .idea/modules.xml
