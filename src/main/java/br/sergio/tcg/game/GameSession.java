@@ -335,15 +335,19 @@ public class GameSession {
     private void distributeCards() {
         var repo = CardRepository.getInstance();
         var cards = repo.getCards();
-        Collections.shuffle(cards);
 
         var attackCards = repo.getAttackCards();
         var defenseCards = repo.getDefenseCards();
+        var effectCards = repo.getEffectCards();
+
+        Collections.shuffle(attackCards);
+        Collections.shuffle(defenseCards);
+        Collections.shuffle(effectCards);
 
         var removed = new ArrayList<Card>();
 
         for (var player : players) {
-            var pair = List.of(attackCards.removeFirst(), defenseCards.removeFirst());
+            var pair = List.of(attackCards.removeFirst(), defenseCards.removeFirst(), effectCards.removeFirst());
             removed.addAll(pair);
             player.getHand().addAll(pair);
         }

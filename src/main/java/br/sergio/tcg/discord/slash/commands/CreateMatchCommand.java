@@ -39,8 +39,8 @@ public class CreateMatchCommand extends SlashCommand {
 
     @Override
     public List<Option> options() {
-        Option minPlayers = new Option(OptionType.INTEGER, "min-players", "Quantidade mínima de jogadores", false, null);
-        Option maxPlayers = new Option(OptionType.INTEGER, "max-payers", "Quantidade máxima de jogadores", false, null);
+        Option minPlayers = new Option(OptionType.INTEGER, "min-players", "Quantidade mínima de jogadores", false);
+        Option maxPlayers = new Option(OptionType.INTEGER, "max-payers", "Quantidade máxima de jogadores", false);
         return List.of(minPlayers, maxPlayers);
     }
 
