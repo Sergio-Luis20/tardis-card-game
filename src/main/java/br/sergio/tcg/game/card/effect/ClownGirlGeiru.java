@@ -76,7 +76,7 @@ public class ClownGirlGeiru extends EffectCard implements ClownGirlCard {
                     }
                     turn.logf("%d cartas de %s foram enviadas de volta ao deck!", diff, secondPlayer.getBoldName());
                 } else if (currentAmount < amountTarget) {
-                    while (secondPlayer.getHand().size() < amountTarget) {
+                    while (secondPlayer.getHand().size() < amountTarget && !session.getDeck().isEmpty()) {
                         session.draw(secondPlayer);
                     }
                     turn.logf("%s foi forçado a comprar %d cartas.", secondPlayer.getBoldName(), amountTarget - currentAmount);

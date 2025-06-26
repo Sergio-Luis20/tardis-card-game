@@ -66,6 +66,7 @@ public class FlatShieldEffect implements DefensiveEffect, EventListener<PlayerDa
         );
 
         if (isExpired()) {
+            session.logf("O escudo de %s quebrou!", target.getBoldName());
             target.removeEffect(this);
         }
     }

@@ -74,11 +74,19 @@ public class ClownGirlFurina extends AttackCard implements ClownGirlCard {
                     revealedCards.add(card);
                     session.revealCards(defender, List.of(card));
                     if (truth.incrementAndGet() % 2 == 0) {
-                        session.draw(attacker);
+                        if (session.draw(attacker) != null) {
+                            session.logf("%s comprou uma carta pelo contador da verdade!", attacker.getBoldName());
+                        } else {
+                            session.logf("%s tentou comprar uma carta pelo contador da verdade, mas " +
+                                    "o deck estava vazio!", attacker.getBoldName());
+                        }
                     }
                 } else {
                     if (lie.incrementAndGet() % 2 == 0) {
-                        defender.subtractHp((int) damage.calculate());
+                        int damageValue = (int) damage.calculate();
+                        defender.subtractHp(damageValue);
+                        session.logf("%s tomou **%d** de dano pelo contador da mentira!",
+                                defender.getBoldName(), damageValue);
                     }
                 }
             });

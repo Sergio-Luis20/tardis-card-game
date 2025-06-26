@@ -132,7 +132,9 @@ public class BattleDetails {
         turn.logf("Vida de %s: %d.", defender.getBoldName(), defender.getHp());
 
         attacker.getHistory().add(attackCard);
-        defender.getHistory().add(defenseCard);
+        if (defenseCard != DefaultDefenseCard.INSTANCE) {
+            defender.getHistory().add(defenseCard);
+        }
 
         session.sendCardToDeck(attacker, attackCard);
         session.sendCardToDeck(defender, defenseCard);

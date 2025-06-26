@@ -41,8 +41,11 @@ public class TurnDetails {
         turnStartTasks.forEach(Runnable::run);
 
         if (pacific) {
-            session.draw(player);
-            logf("%s comprou uma carta!", player.getBoldName());
+            if (session.draw(player) != null) {
+                logf("%s comprou uma carta!", player.getBoldName());
+            } else {
+                logf("%s tentou comprar uma carta, mas o deck estava vazio!", player.getBoldName());
+            }
             effectCardPhase();
         } else {
             Thread.startVirtualThread(battleDetails::doBattle);

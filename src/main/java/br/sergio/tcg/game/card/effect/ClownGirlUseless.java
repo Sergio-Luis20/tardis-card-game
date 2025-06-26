@@ -35,8 +35,13 @@ public class ClownGirlUseless extends EffectCard implements ClownGirlCard {
                 turn.logf("%s não escolheu nenhuma carta para descartar, portanto nenhum efeito será ativado.", target.getBoldName());
             } else {
                 session.sendCardToDeck(target, card);
-                session.draw(target);
-                turn.logf("%s descartou uma carta juntamente da %s e comprou 1 carta!", target.getName(), getName());
+                if (session.draw(target) != null) {
+                    turn.logf("%s descartou uma carta juntamente da %s e comprou 1 carta!",
+                            target.getName(), getName());
+                } else {
+                    turn.logf("%s descartou uma carta juntamente da %s e tentou comprar 1 carta, mas " +
+                            "o deck estava vazio!", target.getName(), getName());
+                }
             }
             future.complete(null);
         });

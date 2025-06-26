@@ -243,14 +243,14 @@ public class GameSession {
         lastTimeAttacked.put(player, false);
     }
 
-    public boolean draw(Player player) {
+    public Card draw(Player player) {
         var card = deck.poll();
         if (card == null) {
             log.warn("Empty deck");
-            return false;
+        } else {
+            player.getHand().add(card);
         }
-        player.getHand().add(card);
-        return true;
+        return card;
     }
 
     public synchronized boolean hasStarted() {
@@ -283,7 +283,31 @@ public class GameSession {
 
     public void startTurn() {
         var player = currentPlayer();
+        if (player == null) {
+            logf("Todos os jogadores morreram ou saíram da partida. Fim de jogo");
+            DiscordService.getInstance().getSessionManager().closeSession(this);
+            return;
+        }
         player.processEffects();
+        var playerIterator = players.iterator();
+        while (playerIterator.hasNext()) {
+            var p = playerIterator.next();
+            if (p.isDead()) {
+                playerIterator.remove();
+                logf("%s morreu!");
+            }
+        }
+        if (players.isEmpty()) {
+            logf("Todos os jogadores morreram ou saíram da partida. Fim de jogo");
+            DiscordService.getInstance().getSessionManager().closeSession(this);
+            return;
+        }
+        if (players.size() == 1) {
+            var winner = players.getFirst();
+            logf("%s venceu a partida!", winner.getBoldName());
+            DiscordService.getInstance().getSessionManager().closeSession(this);
+            return;
+        }
         if (player != currentPlayer()) {
             logf("%s pulou o turno!", player.getBoldName());
             Thread.startVirtualThread(this::startTurn);
@@ -303,9 +327,14 @@ public class GameSession {
             eventRegistry.callEvent(event);
             int damageValue = (int) event.getDamage().calculate();
             player.subtractHp(damageValue);
-            draw(player);
             lastTimeAttacked.put(player, false);
-            logf("%s não tinha cartas na mão, por isso perdeu %d de vida, comprou uma carta e pulou a vez.", player.getBoldName(), damageValue);
+            if (draw(player) != null) {
+                logf("%s não tinha cartas na mão, portanto perdeu %d de vida, comprou uma carta e " +
+                        "pulou a vez.", player.getBoldName(), damageValue);
+            } else {
+                logf("%s não tinha cartas na mão, portanto perdeu %d de vida e pulou a vez (não havia " +
+                        "mais cartas no deck para comprar).", player.getBoldName(), damageValue);
+            }
             nextTurn();
             startTurn();
             return;
@@ -317,8 +346,13 @@ public class GameSession {
                 currentTurn = TurnDetails.pacific(this, player);
                 currentTurn.startTurn();
             } else {
-                draw(player);
-                logf("%s não possui cartas de ataque numa rodada em que deve atacar, portanto comprou uma carta e passou a vez.", player.getBoldName());
+                if (draw(player) != null) {
+                    logf("%s não possui cartas de ataque numa rodada em que deve atacar, portanto " +
+                            "comprou uma carta e passou a vez.", player.getBoldName());
+                } else {
+                    logf("%s não possui cartas de ataque numa rodada em que deve atacar, portanto pulou " +
+                            "a vez (não havia mais cartas no deck para comprar).", player.getBoldName());
+                }
                 nextTurn();
                 startTurn();
             }
