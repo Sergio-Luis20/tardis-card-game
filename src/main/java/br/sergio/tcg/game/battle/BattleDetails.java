@@ -131,6 +131,9 @@ public class BattleDetails {
         turn.logf("Vida de %s: %d.", attacker.getBoldName(), attacker.getHp());
         turn.logf("Vida de %s: %d.", defender.getBoldName(), defender.getHp());
 
+        attacker.getHistory().add(attackCard);
+        defender.getHistory().add(defenseCard);
+
         session.sendCardToDeck(attacker, attackCard);
         session.sendCardToDeck(defender, defenseCard);
 

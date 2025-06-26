@@ -96,6 +96,7 @@ public class TurnDetails {
                         session.sendCardToDeck(player, effectCard);
                     }
                 }
+                player.getHistory().addAll(cards);
                 endTurn();
             });
         });
