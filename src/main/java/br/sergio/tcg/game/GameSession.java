@@ -320,7 +320,7 @@ public class GameSession {
                 draw(p);
             }
         }
-        logf("Iniciando turno de %s.", player.getBoldName());
+        logf("Iniciando turno de %s. Cartas no deck: %d.", player.getBoldName(), deck.size());
         if (player.getHand().isEmpty()) {
             var damage = new AttributeInstance(50);
             var event = new PlayerDamageEvent(null, player, damage);
@@ -427,9 +427,9 @@ public class GameSession {
         var removed = new ArrayList<Card>();
 
         for (var player : players) {
-            var pair = List.of(attackCards.removeFirst(), defenseCards.removeFirst(), effectCards.removeFirst());
-            removed.addAll(pair);
-            player.getHand().addAll(pair);
+            var firstCards = List.of(attackCards.removeFirst(), defenseCards.removeFirst(), effectCards.removeFirst());
+            removed.addAll(firstCards);
+            player.getHand().addAll(firstCards);
         }
 
         cards.removeAll(removed);

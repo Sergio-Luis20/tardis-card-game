@@ -128,8 +128,12 @@ public class BattleDetails {
 
         resolve();
 
-        turn.logf("Vida de %s: %d.", attacker.getBoldName(), attacker.getHp());
-        turn.logf("Vida de %s: %d.", defender.getBoldName(), defender.getHp());
+        var players = new HashSet<Player>();
+        players.addAll(hpVariations.keySet());
+        players.addAll(effects.keySet());
+        for (var player : players) {
+            turn.logf("Vida de %s: %d.", player.getBoldName(), player.getHp());
+        }
 
         attacker.getHistory().add(attackCard);
         if (defenseCard != DefaultDefenseCard.INSTANCE) {
