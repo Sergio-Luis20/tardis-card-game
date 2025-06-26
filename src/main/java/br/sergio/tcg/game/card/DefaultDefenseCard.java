@@ -10,13 +10,14 @@ public class DefaultDefenseCard extends DefenseCard {
 
     private DefaultDefenseCard() {
         super("Carta de defesa padrão", Rarity.COMMON, "Carta de defesa usada " +
-                "internamente quando um jogador escolhe não usar nenhuma.",
-                getImage("carta-de-defesa-padrão.png"));
+                "internamente quando um jogador escolhe não usar nenhuma. O efeito desta carta é " +
+                        "simplesmente anular qualquer coisa feita pela carta de ataque.",
+                "https://i.imgur.com/pXhnEgx.png");
     }
 
     @Override
     public CompletableFuture<Void> action(TurnDetails turn) {
-        turn.getBattleDetails().clearAll();
+        turn.resetBattle(true);
         return completedAction();
     }
 

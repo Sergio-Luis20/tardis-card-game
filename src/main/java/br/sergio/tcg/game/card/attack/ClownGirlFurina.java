@@ -21,7 +21,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ClownGirlFurina extends AttackCard implements ClownGirlCard {
 
     public ClownGirlFurina() {
-        super("Garota palhaço Furina", Rarity.EPIC, "Ao ser ativada, esta carta permanece em campo. Uma vez por turno o oponente deve ou não revelar uma carta. Para cada vez que ele revelar uma carta, adicione 1 ao contador da verdade, e para cada vez que ele não revelar, adicione 1 ao contador da mentira. A cada 2 pontos de verdade, compre uma carta; a cada 2 pontos de mentira, o oponente perde 50 pontos de vida.", getImage("garota-palhaço-furina.png"));
+        super("Garota palhaço Furina", Rarity.EPIC, "Ao ser ativada, esta carta permanece " +
+                "em campo. Uma vez por turno o oponente deve ou não revelar uma carta. Para cada vez que " +
+                "ele revelar uma carta, adicione 1 ao contador da verdade, e para cada vez que ele não " +
+                "revelar, adicione 1 ao contador da mentira. A cada 2 pontos de verdade, compre uma carta; " +
+                "a cada 2 pontos de mentira, o oponente perde 50 pontos de vida.", "https://i.imgur.com/cDQ7oqF.png");
     }
 
     @Override

@@ -6,16 +6,16 @@ import br.sergio.tcg.game.card.Rarity;
 
 import java.util.concurrent.CompletableFuture;
 
-public class Change extends DefenseCard {
+public class Swap extends DefenseCard {
 
-    public Change() {
+    public Swap() {
         super("Trocar!", Rarity.UNCOMMON, "Troca a carta anteriormente usada pela carta " +
-                "atual do adversário.", getImage("trocar.png"));
+                "atual do adversário.", "https://i.imgur.com/SuK1kKL.png");
     }
 
     @Override
     public CompletableFuture<Void> action(TurnDetails turn) {
-        turn.resetBattle();
+        turn.resetBattle(true);
         var attacker = turn.getAttacker();
         var defender = turn.getDefender();
         var attackCard = turn.getBattleDetails().getAttackCard();

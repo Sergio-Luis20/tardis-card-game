@@ -15,7 +15,7 @@ public class ClownGirlEvil extends AttackCard implements ClownGirlCard {
     public ClownGirlEvil() {
         super("Garota palhaço Evil", Rarity.UNCOMMON, "Escolha quaisquer cartas da sua " +
                 "mão e revele ao oponente. Para cada carta revelada, cause 10 pontos de dano à vida " +
-                "dele.", getImage("garota-palhaço-evil.png"));
+                "dele.", "https://i.imgur.com/ZKUE9gN.png");
     }
 
     @Override

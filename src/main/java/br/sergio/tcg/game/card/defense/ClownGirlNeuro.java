@@ -17,12 +17,12 @@ public class ClownGirlNeuro extends DefenseCard implements ClownGirlCard {
     public ClownGirlNeuro() {
         super("Garota palhaço Neuro", Rarity.UNCOMMON, "Escolha quaisquer cartas da " +
                 "sua mão e revele ao oponente. Para cada carta revelada, ganhe 10 pontos de vida.",
-                getImage("garota-palhaço-neuro.png"));
+                "https://i.imgur.com/atsVzPU.png");
     }
 
     @Override
     public CompletableFuture<Void> action(TurnDetails turn) {
-        turn.resetBattle();
+        turn.resetBattle(true);
         var future = new CompletableFuture<Void>();
         var attacker = turn.getAttacker();
         var defender = turn.getDefender();

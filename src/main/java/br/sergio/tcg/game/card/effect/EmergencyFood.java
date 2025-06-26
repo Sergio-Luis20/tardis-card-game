@@ -10,7 +10,8 @@ import java.util.concurrent.CompletableFuture;
 public class EmergencyFood extends EffectCard implements FoodCard {
 
     public EmergencyFood() {
-        super("Comida de emergência", Rarity.RARE, "Cura 35 de vida ao ser consumida.", getImage("comida-de-emergência.png"));
+        super("Comida de emergência", Rarity.RARE, "Cura 35 de vida ao ser consumida.",
+                "https://i.imgur.com/3Su7Fay.png");
     }
 
     @Override

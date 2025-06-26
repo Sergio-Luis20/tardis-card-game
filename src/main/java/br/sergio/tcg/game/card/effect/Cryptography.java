@@ -15,7 +15,7 @@ public class Cryptography extends EffectCard implements RevelationCard, SecretCa
     public Cryptography() {
         super("Criptografia", Rarity.UNCOMMON, "Se alguma carta de revelação for jogada " +
                 "em campo, você pode secretamente jogar esta carta e ocultar a verdadeira face da " +
-                "carta.", getImage("criptografia.png"));
+                "carta.", "https://i.imgur.com/iwtYBEk.png");
     }
 
     @Override
@@ -30,6 +30,11 @@ public class Cryptography extends EffectCard implements RevelationCard, SecretCa
         });
         sendLog(turn.getSession(), turn.getPlayer());
         return completedAction();
+    }
+
+    @Override
+    public String getFamilyName() {
+        return RevelationCard.super.getFamilyName() + ", " + SecretCard.super.getFamilyName();
     }
 
 }

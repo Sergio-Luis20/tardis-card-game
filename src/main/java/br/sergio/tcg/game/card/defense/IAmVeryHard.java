@@ -11,12 +11,12 @@ public class IAmVeryHard extends DefenseCard {
 
     public IAmVeryHard() {
         super("Estou durasso!", Rarity.UNCOMMON, "Cria um escudo muito duro (20 de dureza).",
-                getImage("estou-durasso.png"));
+                "https://i.imgur.com/qJJ9wwl.png");
     }
 
     @Override
     public CompletableFuture<Void> action(TurnDetails turn) {
-        turn.resetBattle();
+        turn.resetBattle(true);
         var target = turn.getDefender();
         var hardShield = new FlatShieldEffect(target, turn.getSession(), 20);
         turn.getBattleDetails().addEffect(target, hardShield);

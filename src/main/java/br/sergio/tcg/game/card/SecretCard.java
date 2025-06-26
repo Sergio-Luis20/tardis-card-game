@@ -10,4 +10,8 @@ public interface SecretCard extends CardFamily {
         session.logf("%s jogou uma carta secreta!", player.getBoldName());
     }
 
+    default String getFamilyName() {
+        return "Carta secreta";
+    }
+
 }

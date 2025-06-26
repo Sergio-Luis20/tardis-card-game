@@ -21,7 +21,7 @@ public class SurgicalInvestigation extends EffectCard {
     public SurgicalInvestigation() {
         super("Investigação cirúrgica", Rarity.EPIC, "À escolha do jogador, pode curar seu " +
                 "campo ou investigar cartas que estão no campo adversário. Só pode optar por um desses dois" +
-                " efeitos.", getImage("investigação-cirúrgica.png"));
+                " efeitos.", "https://i.imgur.com/lWZK29q.png");
     }
 
     @Override
@@ -29,7 +29,7 @@ public class SurgicalInvestigation extends EffectCard {
         final var heal = "Curar seu campo";
         final var spy = "Investigar cartas que estão no campo inimigo";
         var player = turn.getPlayer();
-        var query = new ChooseQuery<>(player, "Escolha", List.of(heal, spy), false, Function.identity());
+        var query = new ChooseQuery<>(player, "Escolha, " + player.getBoldName() + ":", List.of(heal, spy), false, Function.identity());
         var future = new CompletableFuture<Void>();
         turn.getSession().query(query, (q, chosen) -> {
             switch (chosen) {

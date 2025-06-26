@@ -26,7 +26,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 @Slf4j
-public record InputNumberQuery<T extends Number>(Player target, String prompt, boolean pv, Function<String, T> parser) implements Query<T> {
+public record InputNumberQuery<T extends Number>(Player target, String prompt, boolean pv,
+                                                 Function<String, T> parser) implements Query<T> {
 
     public InputNumberQuery {
         Utils.nonNull(target, prompt, parser);
@@ -37,25 +38,29 @@ public record InputNumberQuery<T extends Number>(Player target, String prompt, b
         String interactionId = UUID.randomUUID().toString();
         CompletableFuture<T> future = new CompletableFuture<>();
         Button button = Button.primary(interactionId + ":input", "➕ Inserir número");
-        Consumer<MessageChannel> channelConsumer = channel -> {
-            channel.sendMessage(prompt)
-                    .setActionRow(button)
-                    .queue(message -> {
-                        JDA jda = DiscordService.getInstance().getJda();
-                        InputNumberListener<T> listener = InputNumberListener.<T>builder()
-                                .jda(jda)
-                                .message(message)
-                                .interactionId(interactionId)
-                                .future(future)
-                                .player(target)
-                                .parser(parser)
-                                .build();
-                        jda.addEventListener(listener);
-                    });
-        };
+        Consumer<MessageChannel> channelConsumer = channel -> channel
+                .sendMessage(prompt).setActionRow(button).queue(message -> {
+                    JDA jda = DiscordService.getInstance().getJda();
+                    InputNumberListener<T> listener = InputNumberListener.<T>builder()
+                            .jda(jda)
+                            .message(message)
+                            .interactionId(interactionId)
+                            .future(future)
+                            .player(target)
+                            .parser(parser)
+                            .build();
+                    jda.addEventListener(listener);
+                }, t -> {
+                    log.error("Failed to send message to {}", target.getName(), t);
+                    DiscordService.getInstance().getGameChannel().sendMessage("Não consigo te enviar " +
+                            "mensagens no privado, " + target.getBoldName() + "!").queue();
+                    future.completeExceptionally(t);
+                });
         if (pv) {
             target.getMember().getUser().openPrivateChannel().queue(channelConsumer, t -> {
                 log.error("Failed to get private channel of {}", target.getName(), t);
+                DiscordService.getInstance().getGameChannel().sendMessage("Não consigo te enviar " +
+                        "mensagens no privado, " + target.getBoldName() + "!").queue();
                 future.completeExceptionally(t);
             });
         } else {

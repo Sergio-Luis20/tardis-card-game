@@ -6,6 +6,7 @@ import br.sergio.tcg.game.effect.StatusEffect;
 import lombok.EqualsAndHashCode;
 import lombok.EqualsAndHashCode.Include;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.Member;
 
 import java.awt.*;
@@ -15,6 +16,7 @@ import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
+@Slf4j
 @Getter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Player {
@@ -81,6 +83,13 @@ public class Player {
                 .filter(effectType::isInstance)
                 .map(effectType::cast)
                 .toList();
+    }
+
+    public void sendPrivateMessage(String message) {
+        member.getUser().openPrivateChannel().queue(pv -> pv.sendMessage(message)
+                .queue(null, t -> log.error("Failed to send private message to {}",
+                        getName(), t)), t -> log.error("Failed to get private channel of {}",
+                getName(), t));
     }
 
     public String getName() {

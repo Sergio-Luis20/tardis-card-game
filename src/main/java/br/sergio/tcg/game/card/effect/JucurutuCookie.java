@@ -11,7 +11,8 @@ import java.util.concurrent.CompletableFuture;
 public class JucurutuCookie extends EffectCard implements FoodCard {
 
     public JucurutuCookie() {
-        super("Bolacha Jucurutu", Rarity.UNCOMMON, "Cura 10 de vida por 3 turnos.", getImage("bolacha-jucurutu.png"));
+        super("Bolacha Jucurutu", Rarity.UNCOMMON, "Cura 10 de vida por 3 turnos.",
+                "https://i.imgur.com/WzLvVNW.png");
     }
 
     @Override

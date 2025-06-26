@@ -24,7 +24,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 @Slf4j
-public record ChooseQuery<T>(Player target, String prompt, List<T> options, boolean pv, Function<T, String> mapper) implements Query<T> {
+public record ChooseQuery<T>(Player target, String prompt, List<T> options, boolean pv,
+                             Function<T, String> mapper) implements Query<T> {
 
     public ChooseQuery {
         Utils.nonNull(target, prompt, options, mapper);
@@ -48,24 +49,29 @@ public record ChooseQuery<T>(Player target, String prompt, List<T> options, bool
         }
         CompletableFuture<T> selected = new CompletableFuture<>();
         Consumer<MessageChannel> channelConsumer = channel -> {
-            channel.sendMessage(prompt)
-                    .addActionRow(buttons)
-                    .queue(message -> {
-                        JDA jda = DiscordService.getInstance().getJda();
-                        ChooseQueryListener<T> listener = ChooseQueryListener.<T>builder()
-                                .jda(jda)
-                                .interactionId(interactionId)
-                                .player(target)
-                                .future(selected)
-                                .options(options)
-                                .message(message)
-                                .build();
-                        jda.addEventListener(listener);
-                    });
+            channel.sendMessage(prompt).addActionRow(buttons).queue(message -> {
+                JDA jda = DiscordService.getInstance().getJda();
+                ChooseQueryListener<T> listener = ChooseQueryListener.<T>builder()
+                        .jda(jda)
+                        .interactionId(interactionId)
+                        .player(target)
+                        .future(selected)
+                        .options(options)
+                        .message(message)
+                        .build();
+                jda.addEventListener(listener);
+            }, t -> {
+                log.error("Failed to send message to {}", target.getName(), t);
+                DiscordService.getInstance().getGameChannel().sendMessage("Não consigo te enviar " +
+                        "mensagens no privado, " + target.getBoldName() + "!").queue();
+                selected.completeExceptionally(t);
+            });
         };
         if (pv) {
             target.getMember().getUser().openPrivateChannel().queue(channelConsumer, t -> {
                 log.error("Failed to get private channel of {}", target.getName(), t);
+                DiscordService.getInstance().getGameChannel().sendMessage("Não consigo te enviar " +
+                        "mensagens no privado, " + target.getBoldName() + "!").queue();
                 selected.completeExceptionally(t);
             });
         } else {
@@ -103,9 +109,11 @@ public record ChooseQuery<T>(Player target, String prompt, List<T> options, bool
                     return;
                 }
                 int chosenIndex = Integer.parseInt(parts[1]);
+                DiscordService.getInstance().consumeInteraction(event);
                 future.complete(options.get(chosenIndex));
                 cleanup();
             } catch (Exception e) {
+                event.reply("Erro interno").queue();
                 log.error("Exception on \"choose\" event of player {}", player.getName(), e);
                 cleanup();
                 future.completeExceptionally(e);

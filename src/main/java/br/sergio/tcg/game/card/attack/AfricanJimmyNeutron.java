@@ -10,7 +10,8 @@ import java.util.concurrent.CompletableFuture;
 public class AfricanJimmyNeutron extends AttackCard {
 
     public AfricanJimmyNeutron() {
-        super("Jimmy Neutron africano", Rarity.RARE, "Para o tempo, impedindo assim o oponente de jogar por 2 turnos.", getImage("jimmy-neutron-africano.png"));
+        super("Jimmy Neutron africano", Rarity.RARE, "Para o tempo, impedindo assim o " +
+                "oponente de jogar por 2 turnos.", "https://i.imgur.com/On4i4YQ.png");
     }
 
     @Override

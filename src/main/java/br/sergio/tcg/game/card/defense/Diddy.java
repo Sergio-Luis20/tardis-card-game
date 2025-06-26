@@ -13,12 +13,12 @@ public class Diddy extends DefenseCard implements CombinableCard {
 
     public Diddy() {
         super("Diddy", Rarity.RARE, "Quando combinada com a carta \"Pão\", uma carta " +
-                "inimiga morre e vai para o céu.", getImage("diddy.png"));
+                "inimiga morre e vai para o céu.", "https://i.imgur.com/4xxeDN4.png");
     }
 
     @Override
     public CompletableFuture<Void> action(TurnDetails turn) {
-        turn.resetBattle();
+        turn.resetBattle(true);
         if (!combined) {
             turn.logf("%s não foi combinada com %s, portanto nenhum efeito foi ativado.", getName(), bread().getName());
             return completedAction();

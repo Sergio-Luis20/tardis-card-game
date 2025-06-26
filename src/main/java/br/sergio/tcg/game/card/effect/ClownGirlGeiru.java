@@ -23,7 +23,7 @@ public class ClownGirlGeiru extends EffectCard implements ClownGirlCard {
     public ClownGirlGeiru() {
         super("Garota palhaço Geiru", Rarity.RARE, "Jogue uma moeda, escolha um jogador " +
                 "e o outro deverá descartar ou comprar cartas até ter o mesmo número de cartas do " +
-                "oponente.", getImage("garota-palhaço-geiru.png"));
+                "oponente.", "https://i.imgur.com/HCPjgG5.png");
     }
 
     @Override

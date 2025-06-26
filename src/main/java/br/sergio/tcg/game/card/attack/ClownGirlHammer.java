@@ -18,7 +18,7 @@ public class ClownGirlHammer extends AttackCard implements ClownGirlCard {
     public ClownGirlHammer() {
         super("Martelo da garota palhaço", Rarity.RARE, "Revele da sua mão uma carta " +
                 "\"garota palhaço\" e logo em seguida destrua uma carta na mão do oponente.",
-                getImage("martelo-da-garota-palhaço.png"));
+                "https://i.imgur.com/hC75YoP.png");
     }
 
     @Override

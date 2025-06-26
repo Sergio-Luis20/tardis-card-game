@@ -1,11 +1,12 @@
 package br.sergio.tcg.game;
 
 import br.sergio.tcg.Utils;
+import br.sergio.tcg.discord.CardScrollListener;
 import br.sergio.tcg.discord.DiscordService;
-import br.sergio.tcg.discord.ImageEmbed;
 import br.sergio.tcg.game.card.AttackCard;
 import br.sergio.tcg.game.card.Card;
 import br.sergio.tcg.game.card.CardRepository;
+import br.sergio.tcg.game.card.DefaultDefenseCard;
 import br.sergio.tcg.game.event.Event;
 import br.sergio.tcg.game.event.EventListener;
 import br.sergio.tcg.game.event.EventRegistry;
@@ -50,6 +51,7 @@ public class GameSession {
     private QueryManager queryManager;
     private MessageChannel gameChannel;
     private int minPlayers, maxPlayers;
+    private Map<Player, CardScrollListener> privateCardReveal;
 
     public GameSession(Player host, UUID id, MessageChannel gameChannel) {
         this(host, id, gameChannel, MIN_PLAYERS, MAX_PLAYERS);
@@ -66,6 +68,7 @@ public class GameSession {
         players = Collections.synchronizedList(new ArrayList<>());
         players.add(host);
         attacked = ConcurrentHashMap.newKeySet();
+        privateCardReveal = new ConcurrentHashMap<>();
         lastTimeAttacked = new ConcurrentHashMap<>();
         lastTimeAttacked.put(host, false);
 
@@ -78,6 +81,9 @@ public class GameSession {
     public void sendCardToDeck(Player player, Card card) {
         player.getHand().remove(card);
         player.getTheVoid().remove(card);
+        if (card == DefaultDefenseCard.INSTANCE) {
+            return;
+        }
         if (deck.isEmpty()) {
             deck.add(card);
         } else {
@@ -123,9 +129,11 @@ public class GameSession {
     public void showCard(Player cardOwner, Card card) {
         var cardEmbed = DiscordService.getInstance().getEmbedFactory().createCardEmbed(cardOwner, card);
         if (cardOwner != null) {
-            cardEmbed.fill(gameChannel.sendMessage(cardOwner.getBoldName() + " jogou a seguinte carta:")).queue();
+            gameChannel.sendMessage(cardOwner.getBoldName() + " jogou a seguinte carta:")
+                    .setEmbeds(cardEmbed).queue(null, t -> log.error("Failed to send " +
+                            "card show message of {}", cardOwner.getName(), t));
         } else {
-            cardEmbed.sendEmbed(gameChannel).queue();
+            gameChannel.sendMessageEmbeds(cardEmbed).queue(null, t -> log.error("Failed to show card embed", t));
         }
     }
 
@@ -143,11 +151,13 @@ public class GameSession {
                 .map(card -> DiscordService.getInstance().getEmbedFactory().createCardEmbed(revealer, card))
                 .toList();
         if (revealer == null) {
-            ImageEmbed.fill(gameChannel.sendMessage("A(s) seguinte(s) carta(s) foi(ram) revelada(s):"), cardEmbeds)
-                    .queue(null, t -> log.error("Failed to reveal cards of {}", null, t));
+            gameChannel.sendMessage("A(s) seguinte(s) carta(s) foi(ram) revelada(s):")
+                    .setEmbeds(cardEmbeds).queue(null, t -> log.error("Failed to send " +
+                            "reveal cards message of {}", null, t));
         } else {
-            ImageEmbed.fill(gameChannel.sendMessage("A(s) seguinte(s) carta(s) de " + revealer.getBoldName() + " foi(ram) revelada(s):"), cardEmbeds)
-                    .queue(null, t -> log.error("Failed to reveal cards of {}", revealer.getName(), t));
+            gameChannel.sendMessage("A(s) seguinte(s) carta(s) de " + revealer.getBoldName()
+                    + " foi(ram) revelada(s):").setEmbeds(cardEmbeds).queue(null,
+                    t -> log.error("Failed to reveal cards of {}", revealer.getName(), t));
         }
     }
 
@@ -177,19 +187,35 @@ public class GameSession {
             revealCards(revealer, cards);
             return;
         }
-        var cardEmbeds = cards.stream()
-                .map(card -> DiscordService.getInstance().getEmbedFactory().createCardEmbed(revealer, card))
-                .toList();
+        var revealedCards = new ArrayList<>(cards);
+        var service = DiscordService.getInstance();
+        var firstEmbed = service.getEmbedFactory().createCardEmbed(revealer, cards.getFirst());
         for (var viewer : viewers) {
             viewer.getMember().getUser().openPrivateChannel().queue(pv -> {
-                if (revealer == null) {
-                    ImageEmbed.fill(pv.sendMessage("A(s) seguinte(s) carta(s) foi(ram) revelada(s):"), cardEmbeds)
-                            .queue(null, t -> log.error("Failed to reveal card of {} to {}", null, viewer.getName()));
-                } else {
-                    ImageEmbed.fill(pv.sendMessage("A(s) seguinte(s) carta(s) de " + revealer.getBoldName() + " foi(ram) revelada(s) para você:"), cardEmbeds)
-                            .queue(null, t -> log.error("Failed to reveal card of {} to {}", revealer.getName(), viewer.getName()));
+                var interactionId = UUID.randomUUID().toString();
+                var message = revealer == null ? "A(s) seguinte(s) carta(s) foi(ram) revelada(s):"
+                        : "A(s) seguinte(s) carta(s) de " + revealer.getBoldName()
+                        + " foi(ram) revelada(s) para você:";
+                var oldListener = privateCardReveal.remove(viewer);
+                if (oldListener != null) {
+                    oldListener.cleanup();
                 }
-            }, t -> log.error("Failed to retrieve private channel of {}", viewer.getName(), t));
+                pv.sendMessage(message)
+                        .setEmbeds(firstEmbed)
+                        .setActionRow(CardScrollListener.makeButtons(interactionId, revealedCards))
+                        .queue(revealMessage -> {
+                            var jda = service.getJda();
+                            var listener = new CardScrollListener(interactionId, viewer, revealMessage,
+                                    jda, revealedCards, privateCardReveal);
+                            privateCardReveal.put(viewer, listener);
+                        }, t -> {
+                            log.error("Failed to send reveal cards message of {} to {}", revealer, viewer.getName());
+                            logf("Não consigo te mandar mensagens no privado, %s", viewer.getMember().getAsMention());
+                        });
+            }, t -> {
+                log.error("Failed to retrieve private channel of {}", viewer.getName(), t);
+                logf("Não consigo acessar seu privado, %s", viewer.getMember().getAsMention());
+            });
         }
     }
 
@@ -256,14 +282,20 @@ public class GameSession {
     }
 
     public void startTurn() {
+        var player = currentPlayer();
+        player.processEffects();
+        if (player != currentPlayer()) {
+            logf("%s pulou o turno!", player.getBoldName());
+            Thread.startVirtualThread(this::startTurn);
+            return;
+        }
         if (attacked.containsAll(players)) {
             attacked.clear();
             log("Todos compram 1 carta!");
-            for (var player : players) {
-                draw(player);
+            for (var p : players) {
+                draw(p);
             }
         }
-        var player = currentPlayer();
         logf("Iniciando turno de %s.", player.getBoldName());
         if (player.getHand().isEmpty()) {
             var damage = new AttributeInstance(50);

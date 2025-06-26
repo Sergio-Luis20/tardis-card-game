@@ -2,8 +2,6 @@ package br.sergio.tcg.discord;
 
 import br.sergio.tcg.discord.slash.SlashCommand;
 import br.sergio.tcg.game.SessionManager;
-import br.sergio.tcg.game.Player;
-import br.sergio.tcg.game.card.Card;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
@@ -12,15 +10,16 @@ import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.hooks.EventListener;
+import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -41,8 +40,6 @@ public class DiscordService implements AutoCloseable {
     private SessionManager sessionManager;
     private EmbedFactory embedFactory;
 
-    private Map<Class<?>, Function<?, ImageEmbed>> elementMapperCache;
-
     private DiscordService(JDA jda, Guild guild, TextChannel gameChannel) {
         this.jda = jda;
         this.guild = guild;
@@ -50,9 +47,10 @@ public class DiscordService implements AutoCloseable {
 
         sessionManager = new SessionManager();
         embedFactory = new EmbedFactory();
-        elementMapperCache = new ConcurrentHashMap<>();
+    }
 
-        populateMapperCache();
+    public void consumeInteraction(IReplyCallback interaction) {
+        interaction.reply("✅ Interação consumida com êxito!").setEphemeral(true).queue();
     }
 
     public void registerListener(EventListener listener) {
@@ -91,48 +89,6 @@ public class DiscordService implements AutoCloseable {
                 }, t -> log.error("Failed to fetch commands for guild {}", guild.getName()));
             }
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    public <T> Function<T, ImageEmbed> getMapper(Class<T> elementType) {
-        return (Function<T, ImageEmbed>) elementMapperCache.get(elementType);
-    }
-
-    public <T> CompletableFuture<T> chooseOne(
-            Player player,
-            String prompt,
-            List<T> options,
-            Class<T> type,
-            boolean pv,
-            boolean allowNull
-    ) {
-        return null;
-    }
-
-    public CompletableFuture<Boolean> confirm(Player player, String prompt, boolean pv) {
-        return null;
-    }
-
-    public <T extends Number> CompletableFuture<T> inputNumber(Player player, String prompt,
-                                                               boolean pv, Function<String, T> parser) {
-        return null;
-    }
-
-    public CompletableFuture<String> inputText(Player player, String prompt, boolean pv) {
-        return null;
-    }
-
-    public CompletableFuture<Void> sendMessage(Player player, String message, boolean pv) {
-        return null;
-    }
-
-    private void populateMapperCache() {
-        putMapper(Card.class, embedFactory::createCardEmbed);
-        putMapper(Integer.class, embedFactory::createIntegerEmbed);
-    }
-
-    private <T> void putMapper(Class<T> elementType, Function<T, ImageEmbed> mapper) {
-        elementMapperCache.put(elementType, mapper);
     }
 
     @Override

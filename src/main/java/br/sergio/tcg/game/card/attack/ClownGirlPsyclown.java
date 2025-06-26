@@ -16,7 +16,7 @@ public class ClownGirlPsyclown extends AttackCard implements ClownGirlCard {
 
     public ClownGirlPsyclown() {
         super("Garota palhaço psicolhaça", Rarity.UNCOMMON, "Jogue uma moeda, escolha " +
-                "um jogador e ele perderá 25 pontos de vida.", getImage("garota-palhaço-psicolhaça.png"));
+                "um jogador e ele perderá 25 pontos de vida.", "https://i.imgur.com/9xf9fbD.png");
     }
 
     @Override

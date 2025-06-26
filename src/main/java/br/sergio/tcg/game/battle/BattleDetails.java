@@ -1,5 +1,6 @@
 package br.sergio.tcg.game.battle;
 
+import br.sergio.tcg.Utils;
 import br.sergio.tcg.discord.DiscordService;
 import br.sergio.tcg.game.AttributeInstance;
 import br.sergio.tcg.game.Player;
@@ -14,14 +15,12 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 
@@ -58,6 +57,9 @@ public class BattleDetails {
 
     public void doBattle() {
         // 1. Escolher cartas
+
+        turn.logf("%s escolheu atacar %s!", attacker.getBoldName(), defender.getBoldName());
+        turn.log("É hora do duelo! Escolham suas cartas!");
 
         var attackCardFuture = new CompletableFuture<AttackCard>();
         var defenseCardFuture = new CompletableFuture<DefenseCard>();
@@ -122,10 +124,27 @@ public class BattleDetails {
             attackCard.action(turn).join();
         }
 
+        // 4. Finalizar turno
+
         resolve();
+
+        turn.logf("Vida de %s: %d.", attacker.getBoldName(), attacker.getHp());
+        turn.logf("Vida de %s: %d.", defender.getBoldName(), defender.getHp());
 
         session.sendCardToDeck(attacker, attackCard);
         session.sendCardToDeck(defender, defenseCard);
+
+        var deck = session.getDeck();
+        if (deck.contains(attackCard) && deck.contains(defenseCard)) {
+            var boldCardNames = Stream.of(attackCard, defenseCard)
+                    .map(card -> "**" + card.getName() + "**")
+                    .toList();
+            var names = Utils.formatCollection(boldCardNames);
+            turn.logf("As cartas %s foram enviadas de volta ao deck.", names);
+        } else if (deck.contains(attackCard) || deck.contains(defenseCard)) {
+            var card = deck.contains(attackCard) ? attackCard : defenseCard;
+            turn.logf("A carta **%s** foi enviada de volta ao deck.", card.getName());
+        }
 
         var playerIterator = session.getPlayers().iterator();
         while (playerIterator.hasNext()) {

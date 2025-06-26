@@ -9,7 +9,7 @@ br.sergio.tcg.game.card.attack.ItsOnFireBro
 br.sergio.tcg.game.card.attack.PipiruPiruPiruPipiruPi
 br.sergio.tcg.game.card.attack.TieteAquaman
 
-br.sergio.tcg.game.card.defense.Change
+br.sergio.tcg.game.card.defense.Swap
 br.sergio.tcg.game.card.defense.ChucksDaughter
 br.sergio.tcg.game.card.defense.ClownGirlNeuro
 br.sergio.tcg.game.card.defense.Diddy

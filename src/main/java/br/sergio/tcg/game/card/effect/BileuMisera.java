@@ -20,7 +20,7 @@ public class BileuMisera extends EffectCard {
     public BileuMisera() {
         super("BileuMisera", Rarity.COMMON, "Cura 5 de vida por 5 turnos. Se você sofrer " +
                 "algum dano, ganha o efeito \"hipertensão\", que faz perder 2 de vida pelos turnos " +
-                "restantes.", getImage("bileumisera.png"));
+                "restantes.", "https://i.imgur.com/JNE2k7u.png");
     }
 
     @Override

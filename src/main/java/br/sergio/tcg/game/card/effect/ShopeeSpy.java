@@ -14,7 +14,7 @@ public class ShopeeSpy extends EffectCard {
 
     public ShopeeSpy() {
         super("Espião da Shopee", Rarity.COMMON, "Pode espiar uma carta aleatória de um " +
-                "jogador aleatório.", getImage("espião-da-shopee.png"));
+                "jogador aleatório.", "https://i.imgur.com/qmYj1Vv.png");
     }
 
     @Override

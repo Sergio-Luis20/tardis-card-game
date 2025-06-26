@@ -44,8 +44,10 @@ Na sua vez, um jogador pode escolher atacar outro jogador ou comprar uma carta. 
 na rodada anterior, ele é obrigado a atacar na atual.
 
 Cartas de efeito podem ser usadas apenas no final da vez do jogador, ou seja, depois de ele ter decidido
-atacar outro jogador ou comprar uma nova carta. Após usar uma carta de efeito, se ela não tiver sido mandada
-para o vácuo, ela será enviada novamente ao deck.
+atacar outro jogador ou comprar uma nova carta.
+
+Após ser usada, se uma carta não tiver sido mandada para o vácuo, ela será enviada novamente ao deck
+numa posição aleatória.
 
 Quando o jogo inicia, todos os jogadores ganham 1 carta de cada tipo.
 

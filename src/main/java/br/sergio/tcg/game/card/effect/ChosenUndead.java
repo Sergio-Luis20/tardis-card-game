@@ -10,7 +10,7 @@ public class ChosenUndead extends EffectCard {
 
     public ChosenUndead() {
         super("Chosen Undead", Rarity.RARE, "Revive a última carta perdida. É queimada após " +
-                "ser usada.", getImage("chosen-undead.png"));
+                "ser usada.", "https://i.imgur.com/3Px3MGU.png");
     }
 
     @Override

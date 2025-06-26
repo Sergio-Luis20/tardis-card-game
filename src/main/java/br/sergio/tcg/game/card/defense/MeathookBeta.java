@@ -14,12 +14,13 @@ import java.util.concurrent.ThreadLocalRandom;
 public class MeathookBeta extends DefenseCard {
 
     public MeathookBeta() {
-        super("Meathook beta", Rarity.EPIC, "Rouba 2 cartas inimigas.", getImage("meathook-beta.png"));
+        super("Meathook beta", Rarity.EPIC, "Rouba 2 cartas inimigas.",
+                "https://i.imgur.com/lmJSb9Z.png");
     }
 
     @Override
     public CompletableFuture<Void> action(TurnDetails turn) {
-        turn.resetBattle();
+        turn.resetBattle(true);
         var attacker = turn.getAttacker();
         var defender = turn.getDefender();
         var cards = removeCards(attacker, 2);

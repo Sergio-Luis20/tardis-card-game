@@ -11,7 +11,8 @@ import java.util.concurrent.CompletableFuture;
 public class Bread extends EffectCard implements FoodCard, CombinableCard {
 
     public Bread() {
-        super("Pão", Rarity.COMMON, "Cura 10 de vida.", getImage("pão.png"));
+        super("Pão", Rarity.COMMON, "Cura 10 de vida.",
+                "https://i.imgur.com/KoLRyju.png");
     }
 
     @Override

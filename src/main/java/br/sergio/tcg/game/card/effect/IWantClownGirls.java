@@ -15,13 +15,13 @@ public class IWantClownGirls extends EffectCard implements ClownGirlCard {
 
     public IWantClownGirls() {
         super("Eu queria garotas palhaço", Rarity.COMMON, "Adiciona do deck à sua mão uma " +
-                "carta \"garota palhaço\".", getImage("eu-queria-garotas-palhaço.png"));
+                "carta \"garota palhaço\".", "https://i.imgur.com/nS7SEQp.png");
     }
 
     @Override
     public CompletableFuture<Void> action(TurnDetails turn) {
         var session = turn.getSession();
-        var deck = session.getCards();
+        var deck = session.getDeck();
         var clownGirls = deck.stream()
                 .filter(ClownGirlCard.class::isInstance)
                 .collect(Collectors.toCollection(ArrayList::new));

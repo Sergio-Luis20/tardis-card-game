@@ -16,7 +16,7 @@ public class TheMangoOrTheMelusine extends DefenseCard {
         super("A manga ou a melusine?", Rarity.UNCOMMON, "Ao ser ativada, o usuário pode " +
                 "escolher entre \"manga\" ou \"melusine\". Se escolher manga, tem 60% de dano de reduzir " +
                 "o dano tomado pela metade. Se escolher melusine, tem 40% de dano de contra-atacar o " +
-                "oponente causando-lhe um dano fixo de 10 pontos.", getImage("a-manga-ou-a-melusine.png"));
+                "oponente causando-lhe um dano fixo de 10 pontos.", "https://i.imgur.com/HjBOxyc.png");
     }
 
     @Override

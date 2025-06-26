@@ -19,4 +19,9 @@ public interface ClownGirlCard extends CardFamily {
                 });
     }
 
+    @Override
+    default String getFamilyName() {
+        return "Garota palhaço";
+    }
+
 }

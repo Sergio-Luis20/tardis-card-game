@@ -43,7 +43,7 @@ public abstract class SlashCommand {
     public abstract void onCommand(SlashCommandInteractionEvent event, Member member);
 
     protected void consumeInteraction(SlashCommandInteractionEvent event) {
-        event.reply("✅ Interação consumida com êxito!").setEphemeral(true).queue();
+        DiscordService.getInstance().consumeInteraction(event);
     }
 
     public SlashCommandData slashData() {

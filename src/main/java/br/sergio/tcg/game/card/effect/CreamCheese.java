@@ -11,7 +11,8 @@ public class CreamCheese extends EffectCard implements FoodCard, CombinableCard 
     private boolean combined;
 
     public CreamCheese() {
-        super("Requeijão", Rarity.UNCOMMON, "Quando combinado com a carta \"Pão\", cura 50 de vida.", getImage("requeijão.png"));
+        super("Requeijão", Rarity.UNCOMMON, "Quando combinado com a carta \"Pão\", " +
+                "cura 50 de vida.", "https://i.imgur.com/etar3s9.png");
     }
 
     @Override

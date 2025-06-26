@@ -13,7 +13,7 @@ public class AgakaAnus extends EffectCard {
 
     public AgakaAnus() {
         super("Cu do Agaka", Rarity.LEGENDARY, "Pode enviar uma carta inimiga direto " +
-                "para o esquecimento.", getImage("cu-do-agaka.png"));
+                "para o esquecimento.", "https://i.imgur.com/9wq8RhN.png");
     }
 
     @Override

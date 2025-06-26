@@ -12,7 +12,7 @@ public class TieteAquaman extends AttackCard {
 
     public TieteAquaman() {
         super("Aquaman do Tietê", Rarity.COMMON, "Aplica veneno que dá 4 de dano por 5 " +
-                "turnos.", getImage("aquaman-do-tietê.png"));
+                "turnos.", "https://i.imgur.com/WoHfC10.png");
     }
 
     @Override

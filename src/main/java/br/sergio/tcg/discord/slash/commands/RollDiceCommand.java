@@ -64,7 +64,7 @@ public class RollDiceCommand extends SlashCommand {
         var selfUser = service.getJda().getSelfUser();
         var embed = service.getEmbedFactory().createRollEmbed(player, roll);
 
-        event.replyEmbeds(embed.embed()).queue(success -> {
+        event.replyEmbeds(embed).queue(success -> {
             var ch = event.getChannel();
 
             if (!diceOrdering.isRoundReady()) {
@@ -126,7 +126,7 @@ public class RollDiceCommand extends SlashCommand {
         var turn = session.getCurrentTurn();
         if (turn.isPacific()) {
             event.reply("O turno não é de batalha.").setEphemeral(true).queue();
-        } else if (turn.getBattleDetails().isRollDicePhase()) {
+        } else if (!turn.getBattleDetails().isRollDicePhase()) {
             event.reply("Não está na hora de rolar dados.").setEphemeral(true).queue();
         } else if (turn.getAttacker().equals(player)) {
             var battle = turn.getBattleDetails();
@@ -135,7 +135,7 @@ public class RollDiceCommand extends SlashCommand {
             } else {
                 int roll = Utils.rollDice();
                 var rollEmbed = DiscordService.getInstance().getEmbedFactory().createRollEmbed(player, roll);
-                event.replyEmbeds(rollEmbed.embed()).queue();
+                event.replyEmbeds(rollEmbed).queue();
                 battle.setAttackerRoll(roll);
             }
         } else if (turn.getDefender().equals(player)) {
@@ -145,7 +145,7 @@ public class RollDiceCommand extends SlashCommand {
             } else {
                 int roll = Utils.rollDice();
                 var rollEmbed = DiscordService.getInstance().getEmbedFactory().createRollEmbed(player, roll);
-                event.replyEmbeds(rollEmbed.embed()).queue();
+                event.replyEmbeds(rollEmbed).queue();
                 battle.setDefenderRoll(roll);
             }
         } else {

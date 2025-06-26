@@ -11,7 +11,7 @@ public class PipiruPiruPiruPipiruPi extends AttackCard {
 
     public PipiruPiruPiruPipiruPi() {
         super("Pipiru piru piru pipiru pi", Rarity.EPIC, "Inflige 60 de dano bruto ao " +
-                "adversário, ignorando qualquer defesa.", getImage("pipiru-piru-piru-pipiru-pi.png"));
+                "adversário, ignorando qualquer defesa.", "https://i.imgur.com/hxxhtCw.png");
     }
 
     @Override

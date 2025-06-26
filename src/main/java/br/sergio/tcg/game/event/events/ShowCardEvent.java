@@ -1,12 +1,12 @@
 package br.sergio.tcg.game.event.events;
 
 import br.sergio.tcg.discord.DiscordService;
-import br.sergio.tcg.discord.ImageEmbed;
 import br.sergio.tcg.game.Player;
 import br.sergio.tcg.game.card.Card;
 import br.sergio.tcg.game.event.Event;
 import lombok.Getter;
 import lombok.Setter;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 
 /**
  * Event triggered when a card is shown on the chat.
@@ -19,7 +19,7 @@ public class ShowCardEvent implements Event {
 
     private Player player;
     private Card card;
-    private ImageEmbed cardEmbed;
+    private MessageEmbed cardEmbed;
 
     public ShowCardEvent(Player player, Card card) {
         this.player = player;

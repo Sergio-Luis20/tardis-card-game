@@ -4,24 +4,27 @@ import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @ToString
 @EqualsAndHashCode
 public class CardCombination implements Iterable<CombinableCard>, Cloneable {
 
-    private Set<CombinableCard> cards;
+    private List<CombinableCard> cards;
 
     public CardCombination() {
-        cards = new HashSet<>();
+        cards = new ArrayList<>();
     }
 
     public CardCombination(CombinableCard... cards) {
-        this.cards = new HashSet<>(Arrays.asList(cards));
+        this(Arrays.asList(cards));
+    }
+
+    public CardCombination(Collection<? extends CombinableCard> cards) {
+        this.cards = new ArrayList<>(cards);
     }
 
     public CardCombination(CardCombination other) {
-        cards = new HashSet<>(other.cards);
+        cards = new ArrayList<>(other.cards);
     }
 
     public CardCombination add(CombinableCard combinableCard) {
@@ -55,12 +58,12 @@ public class CardCombination implements Iterable<CombinableCard>, Cloneable {
         }
     }
 
-    public Set<Card> getCards() {
-        return cards.stream().map(Card.class::cast).collect(Collectors.toSet());
+    public List<Card> getCards() {
+        return cards.stream().map(Card.class::cast).toList();
     }
 
-    public Set<CombinableCard> getCombinableCards() {
-        return Collections.unmodifiableSet(cards);
+    public List<CombinableCard> getCombinableCards() {
+        return Collections.unmodifiableList(cards);
     }
 
     @Override

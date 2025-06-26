@@ -14,7 +14,8 @@ import java.util.stream.Collectors;
 public class Ban00 extends AttackCard {
 
     public Ban00() {
-        super("Ban 00", Rarity.EPIC, "Bane X cartas de efeito da mão adversária.", getImage("ban00.png"));
+        super("Ban 00", Rarity.EPIC, "Bane X cartas de efeito da mão adversária.",
+                "https://i.imgur.com/skEWJIg.png");
     }
 
     @Override

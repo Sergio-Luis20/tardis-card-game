@@ -14,7 +14,7 @@ public class ClownGirlUseless extends EffectCard implements ClownGirlCard {
 
     public ClownGirlUseless() {
         super("Garota palhaço inútil", Rarity.COMMON, "Descarte esta carta e mais outra e " +
-                "depois compre uma carta.", getImage("garota-palhaço-inútil.png"));
+                "depois compre uma carta.", "https://i.imgur.com/rVv1amC.png");
     }
 
     @Override

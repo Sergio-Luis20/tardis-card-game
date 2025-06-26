@@ -14,7 +14,7 @@ public class ItsOnFireBro extends AttackCard {
 
     public ItsOnFireBro() {
         super("Tá pegando fogo, bicho!", Rarity.COMMON, "Aplica efeito de \"queimadura\", " +
-                "que inflige 2 de dano por 7 turnos.", getImage("tá-pegando-fogo-bicho.png"));
+                "que inflige 2 de dano por 7 turnos.", "https://i.imgur.com/OWsjHiC.png");
     }
 
     @Override

@@ -4,6 +4,7 @@ target/
 !**/src/test/**/target/
 
 .env
+card-images/
 
 ### IntelliJ IDEA ###
 .idea/modules.xml

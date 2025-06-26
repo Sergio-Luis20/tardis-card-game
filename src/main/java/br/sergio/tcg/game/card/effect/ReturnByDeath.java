@@ -9,7 +9,8 @@ import java.util.concurrent.CompletableFuture;
 public class ReturnByDeath extends EffectCard {
 
     public ReturnByDeath() {
-        super("Retorno através da morte", Rarity.RARE, "Revive a última carta aliada morta", getImage("retorno-através-da-morte.png"));
+        super("Retorno através da morte", Rarity.RARE, "Revive a última carta aliada " +
+                "morta", "https://i.imgur.com/f3RHrUR.png");
     }
 
     @Override

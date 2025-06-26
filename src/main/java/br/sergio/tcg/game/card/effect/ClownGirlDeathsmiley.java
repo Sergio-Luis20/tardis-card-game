@@ -12,7 +12,8 @@ import java.util.concurrent.CompletableFuture;
 public class ClownGirlDeathsmiley extends EffectCard implements ClownGirlCard {
 
     public ClownGirlDeathsmiley() {
-        super("Garota palhaço morterrisonha", Rarity.RARE, "Revive uma carta \"garota palhaço\".", getImage("garota-palhaço-morterrisonha.png"));
+        super("Garota palhaço morterrisonha", Rarity.RARE, "Revive uma carta \"garota " +
+                "palhaço\".", "https://i.imgur.com/DuMGt4B.png");
     }
 
     @Override

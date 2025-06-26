@@ -74,6 +74,7 @@ public class TurnDetails {
                 endTurn();
                 return;
             }
+            logf("%s está decidindo se usará cartas de efeito.", player.getBoldName());
             var query = new SelectManyQuery<>(
                     player,
                     "Deseja usar alguma carta de efeito?",
@@ -100,9 +101,12 @@ public class TurnDetails {
         });
     }
 
-    public void resetBattle() {
+    public void resetBattle(boolean printDefenseMessage) {
         if (!pacific) {
             battleDetails.clearAll();
+            if (printDefenseMessage) {
+                logf("Os efeitos da carta de ataque **%s** foram anulados!", battleDetails.getAttackCard().getName());
+            }
         }
     }
 

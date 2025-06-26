@@ -1,11 +1,9 @@
 package br.sergio.tcg.game.card;
 
-import java.awt.image.BufferedImage;
-
 public abstract non-sealed class EffectCard extends Card {
 
-    public EffectCard(String name, Rarity rarity, String description, BufferedImage image) {
-        super(name, rarity, description, image);
+    public EffectCard(String name, Rarity rarity, String description, String imageUrl) {
+        super(name, rarity, description, imageUrl);
     }
 
     @Override

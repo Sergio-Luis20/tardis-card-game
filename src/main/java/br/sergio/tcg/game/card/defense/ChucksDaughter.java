@@ -18,7 +18,7 @@ public class ChucksDaughter extends DefenseCard {
     public ChucksDaughter() {
         super("Filha do Chuck", Rarity.COMMON, "Ganha para si o efeito \"vergonha " +
                 "alheia\" por 2 turnos. Enquanto estiver com esse efeito, o inimigo perde no argumento, " +
-                "reduzindo o dano recebido em 20%.", getImage("filha-do-chuck.png"));
+                "reduzindo o dano recebido em 20%.", "https://i.imgur.com/K9QeEQ6.png");
     }
 
     @Override
