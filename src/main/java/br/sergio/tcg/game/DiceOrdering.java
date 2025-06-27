@@ -72,7 +72,7 @@ public class DiceOrdering {
     }
 
     public List<Player> getOrderedList() {
-        return Collections.unmodifiableList(ordered);
+        return ordered;
     }
 
     public List<Player> getRemainingPlayers() {

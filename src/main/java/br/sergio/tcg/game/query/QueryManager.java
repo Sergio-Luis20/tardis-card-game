@@ -20,7 +20,7 @@ public class QueryManager {
 
     public <Q extends Query<R>, R> void query(Q query, QueryCallback<Q, R> callback) {
         callbacks.put(query, callback);
-        query.execute(this, session);
+        Thread.startVirtualThread(() -> query.execute(this, session));
     }
 
     @SuppressWarnings("unchecked")

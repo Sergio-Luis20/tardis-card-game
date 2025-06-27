@@ -38,10 +38,13 @@ public class TurnDetails {
         if (turnStarted) {
             return;
         }
+        log.info("Processing turn of {}.", player.getName());
         turnStartTasks.forEach(Runnable::run);
 
         if (pacific) {
-            if (session.draw(player) != null) {
+            var drawnCard = session.draw(player);
+            if (drawnCard != null) {
+                log.info("{} drawn the card \"{}\".", player.getName(), drawnCard.getName());
                 logf("%s comprou uma carta!", player.getBoldName());
             } else {
                 logf("%s tentou comprar uma carta, mas o deck estava vazio!", player.getBoldName());
@@ -58,10 +61,11 @@ public class TurnDetails {
         if (turnTerminated) {
             return;
         }
+        log.info("Ending turn of {}.", player.getName());
         turnEndTasks.forEach(Runnable::run);
         turnTerminated = true;
 
-        logf("Turno de %s terminado", player.getBoldName());
+        logf("Turno de %s terminado.", player.getBoldName());
         session.nextTurn();
         session.startTurn();
     }
@@ -73,6 +77,7 @@ public class TurnDetails {
                     .map(EffectCard.class::cast)
                     .toList();
             if (effectCards.isEmpty()) {
+                log.info("{} has no card effects to use.", player.getName());
                 logf("%s não possui nenhuma carta de efeito para usar.", player.getBoldName());
                 endTurn();
                 return;
@@ -86,6 +91,7 @@ public class TurnDetails {
                     true,
                     card -> DiscordService.getInstance().getEmbedFactory().createCardEmbed(player, card)
             );
+            log.info("Sending effect card query to {}.", player.getName());
             session.query(query, (q, cards) -> {
                 if (cards.isEmpty()) {
                     logf("%s escolheu não usar cartas de efeito.", player.getBoldName());
@@ -107,6 +113,8 @@ public class TurnDetails {
 
     public void resetBattle(boolean printDefenseMessage) {
         if (!pacific) {
+            log.info("Reseting battle of {} against {}. Will print defense message on discord: {}.",
+                    attacker.getName(), defender.getName(), printDefenseMessage);
             battleDetails.clearAll();
             if (printDefenseMessage) {
                 logf("Os efeitos da carta de ataque **%s** foram anulados!", battleDetails.getAttackCard().getName());
@@ -123,6 +131,7 @@ public class TurnDetails {
     }
 
     public static TurnDetails pacific(GameSession session, Player player) {
+        log.info("Creating pacific turn for {} in match {}.", player.getName(), session.getId());
         var details = new TurnDetails();
         details.session = session;
         details.player = player;
@@ -131,6 +140,8 @@ public class TurnDetails {
     }
 
     public static TurnDetails battle(GameSession session, Player attacker, Player defender) {
+        log.info("Creating battle turn for {} against {} in match {}.",
+                attacker.getName(), defender.getName(), session.getId());
         var details = new TurnDetails();
         details.session = session;
         details.player = attacker;

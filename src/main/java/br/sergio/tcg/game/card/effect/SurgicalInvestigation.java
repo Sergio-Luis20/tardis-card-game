@@ -26,8 +26,8 @@ public class SurgicalInvestigation extends EffectCard {
 
     @Override
     public CompletableFuture<Void> action(TurnDetails turn) {
-        final var heal = "Curar seu campo";
-        final var spy = "Investigar cartas que estão no campo inimigo";
+        final var heal = "❤ Curar seu campo";
+        final var spy = "☂ Investigar cartas que estão no campo inimigo";
         var player = turn.getPlayer();
         var query = new ChooseQuery<>(player, "Escolha, " + player.getBoldName() + ":", List.of(heal, spy), false, Function.identity());
         var future = new CompletableFuture<Void>();

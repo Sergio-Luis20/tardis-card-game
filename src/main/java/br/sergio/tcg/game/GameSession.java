@@ -26,6 +26,7 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
@@ -41,10 +42,10 @@ public class GameSession {
     private List<Player> players;
     private Set<Player> attacked;
     private Map<Player, Boolean> lastTimeAttacked;
-    private int orderCursor;
+    private AtomicInteger orderCursor;
     private volatile TurnDetails currentTurn;
     private boolean started;
-    private LinkedList<Card> deck;
+    private List<Card> deck;
     private ZonedDateTime creationTime;
     private DiceOrdering diceOrdering;
     private EventRegistry eventRegistry;
@@ -72,6 +73,7 @@ public class GameSession {
         lastTimeAttacked = new ConcurrentHashMap<>();
         lastTimeAttacked.put(host, false);
 
+        orderCursor = new AtomicInteger();
         diceOrdering = new DiceOrdering(players);
         eventRegistry = new EventRegistry(this);
         queryManager = new QueryManager(this);
@@ -244,11 +246,13 @@ public class GameSession {
     }
 
     public Card draw(Player player) {
-        var card = deck.poll();
-        if (card == null) {
-            log.warn("Empty deck");
-        } else {
+        Card card;
+        try {
+            card = deck.removeFirst();
             player.getHand().add(card);
+        } catch (NoSuchElementException e) {
+            log.warn("Empty deck");
+            card = null;
         }
         return card;
     }
@@ -276,131 +280,170 @@ public class GameSession {
         if (!diceOrdering.allOrdersDefined()) {
             throw new IllegalStateException("You lied to me!");
         }
-        players = diceOrdering.getOrderedList();
+        players = Collections.synchronizedList(diceOrdering.getOrderedList());
         distributeCards();
         startTurn();
     }
 
     public void startTurn() {
-        var player = currentPlayer();
-        if (player == null) {
-            logf("Todos os jogadores morreram ou saíram da partida. Fim de jogo");
-            DiscordService.getInstance().getSessionManager().closeSession(this);
-            return;
-        }
-        player.processEffects();
-        var playerIterator = players.iterator();
-        while (playerIterator.hasNext()) {
-            var p = playerIterator.next();
-            if (p.isDead()) {
-                playerIterator.remove();
-                logf("%s morreu!");
+        Thread.startVirtualThread(() -> {
+            var player = currentPlayer();
+            if (player == null) {
+                log.info("Current player is null. Match finished: {}.", id);
+                logf("Todos os jogadores morreram ou saíram da partida. Fim de jogo");
+                DiscordService.getInstance().getSessionManager().closeSession(this);
+                return;
             }
-        }
-        if (players.isEmpty()) {
-            logf("Todos os jogadores morreram ou saíram da partida. Fim de jogo");
-            DiscordService.getInstance().getSessionManager().closeSession(this);
-            return;
-        }
-        if (players.size() == 1) {
-            var winner = players.getFirst();
-            logf("%s venceu a partida!", winner.getBoldName());
-            DiscordService.getInstance().getSessionManager().closeSession(this);
-            return;
-        }
-        if (player != currentPlayer()) {
-            logf("%s pulou o turno!", player.getBoldName());
-            Thread.startVirtualThread(this::startTurn);
-            return;
-        }
-        if (attacked.containsAll(players)) {
-            attacked.clear();
-            log("Todos compram 1 carta!");
-            for (var p : players) {
-                draw(p);
+
+            log.info("Processing effects of {}.", player.getName());
+            player.processEffects();
+
+            log.info("Removing dead players: {}.", id);
+            int count = 0;
+            var playerIterator = players.iterator();
+            while (playerIterator.hasNext()) {
+                var p = playerIterator.next();
+                if (p.isDead()) {
+                    playerIterator.remove();
+                    logf("%s morreu!");
+                    count++;
+                }
             }
-        }
-        logf("Iniciando turno de %s. Cartas no deck: %d.", player.getBoldName(), deck.size());
-        if (player.getHand().isEmpty()) {
-            var damage = new AttributeInstance(50);
-            var event = new PlayerDamageEvent(null, player, damage);
-            eventRegistry.callEvent(event);
-            int damageValue = (int) event.getDamage().calculate();
-            player.subtractHp(damageValue);
-            lastTimeAttacked.put(player, false);
-            if (draw(player) != null) {
-                logf("%s não tinha cartas na mão, portanto perdeu %d de vida, comprou uma carta e " +
-                        "pulou a vez.", player.getBoldName(), damageValue);
-            } else {
-                logf("%s não tinha cartas na mão, portanto perdeu %d de vida e pulou a vez (não havia " +
-                        "mais cartas no deck para comprar).", player.getBoldName(), damageValue);
+            recomputeOrderCursor();
+            log.info("{} dead players removed.", count);
+
+            if (players.isEmpty()) {
+                log.info("Player list is empty. Match finished: {}.", id);
+                logf("Todos os jogadores morreram ou saíram da partida. Fim de jogo");
+                DiscordService.getInstance().getSessionManager().closeSession(this);
+                return;
             }
-            nextTurn();
-            startTurn();
-            return;
-        }
-        if (player.getHand().stream().noneMatch(AttackCard.class::isInstance)) {
-            if (lastTimeAttacked.get(player)) {
+
+            if (players.size() == 1) {
+                var winner = players.getFirst();
+                log.info("{} won the match {}.", winner.getName(), id);
+                logf("%s venceu a partida!", winner.getBoldName());
+                DiscordService.getInstance().getSessionManager().closeSession(this);
+                return;
+            }
+
+            if (player != currentPlayer()) {
+                log.info("{} skipped its turn.", player.getName());
+                logf("%s pulou o turno!", player.getBoldName());
+                startTurn();
+                return;
+            }
+
+            if (attacked.containsAll(players)) {
+                log.info("All players already attacked. They will draw a card. Match id: {}.", id);
+                attacked.clear();
+                log("Todos compram 1 carta!");
+                for (var p : players) {
+                    draw(p);
+                }
+            }
+
+            log.info("Starting turn of {}. Cards in deck: {}.", player.getName(), deck.size());
+            logf("Iniciando turno de %s. Cartas no deck: %d.", player.getBoldName(), deck.size());
+
+            if (player.getHand().isEmpty()) {
+                int damageBaseValue = 50;
+                log.info("{} has no cards in its hand. It will lose {} HP, try to draw a card and skip " +
+                        "his turn.", player.getName(), damageBaseValue);
+                var damage = new AttributeInstance(damageBaseValue);
+                var event = new PlayerDamageEvent(null, player, damage);
+                eventRegistry.callEvent(event);
+                int damageValue = (int) event.getDamage().calculate();
+                player.subtractHp(damageValue);
                 lastTimeAttacked.put(player, false);
-                logf("%s não possui cartas de ataque, portanto em seu turno ele obrigatoriamente comprou uma carta.");
-                currentTurn = TurnDetails.pacific(this, player);
-                currentTurn.startTurn();
-            } else {
                 if (draw(player) != null) {
-                    logf("%s não possui cartas de ataque numa rodada em que deve atacar, portanto " +
-                            "comprou uma carta e passou a vez.", player.getBoldName());
+                    logf("%s não tinha cartas na mão, portanto perdeu %d de vida, comprou uma carta e " +
+                            "pulou a vez.", player.getBoldName(), damageValue);
                 } else {
-                    logf("%s não possui cartas de ataque numa rodada em que deve atacar, portanto pulou " +
-                            "a vez (não havia mais cartas no deck para comprar).", player.getBoldName());
+                    logf("%s não tinha cartas na mão, portanto perdeu %d de vida e pulou a vez (não havia " +
+                            "mais cartas no deck para comprar).", player.getBoldName(), damageValue);
                 }
                 nextTurn();
                 startTurn();
+                return;
             }
-            return;
-        }
-        final var attack = "\uD83D\uDD2A Atacar";
-        final var drawCard = "\uD83C\uDCCF Comprar carta";
-        var query = new ChooseQuery<>(
-                player,
-                "Sua vez, " + player.getBoldName() + "! Escolha o que fazer:",
-                List.of(attack, drawCard),
-                false,
-                Function.identity()
-        );
-        query(query, (q, action) -> {
-            switch (action) {
-                case attack -> {
-                    var players = new ArrayList<>(getPlayers());
-                    players.remove(player);
-                    var playerQuery = new SelectOneQuery<>(
-                            player,
-                            "Escolha quem atacar",
-                            players,
-                            false,
-                            false,
-                            DiscordService.getInstance().getEmbedFactory()::createPlayerEmbed
-                    );
-                    query(playerQuery, (pq, target) -> {
-                        currentTurn = TurnDetails.battle(this, player, target);
-                        currentTurn.startTurn();
-                    });
-                    lastTimeAttacked.put(player, true);
-                    attacked.add(player);
-                }
-                case drawCard -> {
+
+            if (player.getHand().stream().noneMatch(AttackCard.class::isInstance)) {
+                log.info("{} has no attack cards in its hand.", player.getName());
+                if (lastTimeAttacked.get(player)) {
+                    log.info("{} drawn a card.", player.getName());
+                    lastTimeAttacked.put(player, false);
+                    logf("%s não possui cartas de ataque, portanto em seu turno ele obrigatoriamente comprou uma carta.");
                     currentTurn = TurnDetails.pacific(this, player);
                     currentTurn.startTurn();
+                } else {
+                    log.info("{} should've attacked now, so it will draw a card and skip his turn.", player.getName());
+                    if (draw(player) != null) {
+                        logf("%s não possui cartas de ataque numa rodada em que deve atacar, portanto " +
+                                "comprou uma carta e passou a vez.", player.getBoldName());
+                    } else {
+                        logf("%s não possui cartas de ataque numa rodada em que deve atacar, portanto pulou " +
+                                "a vez (não havia mais cartas no deck para comprar).", player.getBoldName());
+                    }
+                    nextTurn();
+                    startTurn();
                 }
-                default -> throw new AssertionError("No recognized option on choose query.");
+                return;
             }
+
+            final var attack = "\uD83D\uDD2A Atacar";
+            final var drawCard = "\uD83C\uDCCF Comprar carta";
+            var query = new ChooseQuery<>(
+                    player,
+                    "Sua vez, " + player.getBoldName() + "! Escolha o que fazer:",
+                    List.of(attack, drawCard),
+                    false,
+                    Function.identity()
+            );
+            query(query, (q, action) -> {
+                switch (action) {
+                    case attack -> {
+                        log.info("{} chose to attack.", player.getName());
+                        var players = new ArrayList<>(getPlayers());
+                        players.remove(player);
+                        var playerQuery = new SelectOneQuery<>(
+                                player,
+                                "Escolha quem atacar",
+                                players,
+                                false,
+                                false,
+                                DiscordService.getInstance().getEmbedFactory()::createPlayerEmbed
+                        );
+                        query(playerQuery, (pq, target) -> {
+                            log.info("{} chose to attack {}.", player.getName(), target.getName());
+                            currentTurn = TurnDetails.battle(this, player, target);
+                            currentTurn.startTurn();
+                        });
+                        lastTimeAttacked.put(player, true);
+                        attacked.add(player);
+                    }
+                    case drawCard -> {
+                        log.info("{} choose to draw a card.", player.getName());
+                        currentTurn = TurnDetails.pacific(this, player);
+                        currentTurn.startTurn();
+                    }
+                    default -> throw new AssertionError("No recognized option on choose query.");
+                }
+            });
         });
     }
 
     public void nextTurn() {
-        if (orderCursor == players.size() - 1) {
-            orderCursor = 0;
+        if (orderCursor.get() >= players.size() - 1) {
+            orderCursor.set(0);
         } else {
-            orderCursor++;
+            orderCursor.incrementAndGet();
+        }
+    }
+
+    public void recomputeOrderCursor() {
+        if (orderCursor.get() >= players.size()) {
+            orderCursor.set(players.size() - 1);
         }
     }
 
@@ -409,7 +452,8 @@ public class GameSession {
     }
 
     public Player currentPlayer() {
-        return players.get(orderCursor);
+        int cursor = orderCursor.get();
+        return cursor >= players.size() ? null : players.get(cursor);
     }
 
     private void distributeCards() {
@@ -435,7 +479,7 @@ public class GameSession {
         cards.removeAll(removed);
         Collections.shuffle(cards);
 
-        this.deck = new LinkedList<>(cards);
+        this.deck = Collections.synchronizedList(new ArrayList<>(cards));
     }
 
 }

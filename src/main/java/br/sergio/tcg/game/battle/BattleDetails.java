@@ -56,13 +56,21 @@ public class BattleDetails {
     }
 
     public void doBattle() {
+        var attackerName = attacker.getName();
+        var defenderName = defender.getName();
+
+        log.info("Starting battle of {} against {}.", attackerName, defenderName);
+
         // 1. Escolher cartas
 
         turn.logf("%s escolheu atacar %s!", attacker.getBoldName(), defender.getBoldName());
         turn.log("É hora do duelo! Escolham suas cartas!");
 
+        var session = turn.getSession();
+
         var attackCardFuture = new CompletableFuture<AttackCard>();
         var defenseCardFuture = new CompletableFuture<DefenseCard>();
+
         var attackCards = attacker.getHand().stream()
                 .filter(AttackCard.class::isInstance)
                 .map(AttackCard.class::cast)
@@ -75,13 +83,22 @@ public class BattleDetails {
                 false,
                 card -> DiscordService.getInstance().getEmbedFactory().createCardEmbed(attacker, card)
         );
-        var session = turn.getSession();
+        if (attackCards.size() == 1) {
+            log.info("{} has only 1 attack card: {}. It will be selected automatically.",
+                    attackerName, attackCards.getFirst());
+            turn.logf("%s tem apenas 1 carta de ataque. Ela será escolhida automaticamente.", attacker.getBoldName());
+        } else {
+            log.info("Sending attack card query to {}.", attackerName);
+        }
         session.query(attackCardQuery, (q, card) -> attackCardFuture.complete(card));
+
         var defenseCards = defender.getHand().stream()
                 .filter(DefenseCard.class::isInstance)
                 .map(DefenseCard.class::cast)
                 .toList();
         if (defenseCards.isEmpty()) {
+            log.info("{} has no defense cards. The default one will be used.", defenderName);
+            turn.logf("%s não possui cartas de defesa. A carta de defesa padrão será escolhida automaticamente.", defender.getBoldName());
             defenseCardFuture.complete(DefaultDefenseCard.INSTANCE);
         } else {
             var defenseCardQuery = new SelectOneQuery<>(
@@ -92,17 +109,20 @@ public class BattleDetails {
                     true,
                     card -> DiscordService.getInstance().getEmbedFactory().createCardEmbed(defender, card)
             );
+            log.info("Sending defense card query to {}.", defenderName);
             session.query(defenseCardQuery, (q, card) -> defenseCardFuture.complete(card == null ? DefaultDefenseCard.INSTANCE : card));
         }
 
         try {
+            log.info("Awaiting {} and {} to choose their cards.", attackerName, defenderName);
             attackCard = attackCardFuture.get();
             defenseCard = defenseCardFuture.get();
         } catch (InterruptedException | ExecutionException e) {
-            log.error("Failed to get attack card", e);
+            log.error("Failed to get cards.", e);
             return;
         }
 
+        log.info("Showing cards onto table.");
         session.showCard(attacker, attackCard);
         session.showCard(defender, defenseCard);
 
@@ -110,31 +130,40 @@ public class BattleDetails {
 
         rollDicePhase = true;
         turn.log("Hora de rolar dados!");
+        log.info("Awaiting {} and {} to roll dices.", attackerName, defenderName);
         CompletableFuture.allOf(attackerRollFuture, defenderRollFuture).join();
         rollDicePhase = false;
+        log.info("{}' roll: {}. {}'s roll: {}.", attackerName, attackerRoll, defenderName, defenderRoll);
 
         // 3. Executar cartas
 
         if (attackerRoll < defenderRoll || attackerRoll == defenderRoll && defenseCard != DefaultDefenseCard.INSTANCE) {
+            log.info("{} won the dice roll.", defenderName);
             turn.logf("%s venceu na rolagem de dados!", defender.getBoldName());
             attackCard.action(turn).join();
             defenseCard.action(turn).join();
         } else {
+            log.info("{} won the dice roll.", attackerName);
             turn.logf("%s venceu na rolagem de dados!", attacker.getBoldName());
             attackCard.action(turn).join();
         }
 
         // 4. Finalizar turno
 
+        log.info("Resolving battle of {} against {}.", attackerName, defenderName);
         resolve();
+        log.info("Battle of {} against {} resolved.", attackerName, defenderName);
 
         var players = new HashSet<Player>();
         players.addAll(hpVariations.keySet());
         players.addAll(effects.keySet());
         for (var player : players) {
-            turn.logf("Vida de %s: %d.", player.getBoldName(), player.getHp());
+            int hp = player.getHp();
+            log.info("HP of {}: {}.", player.getName(), hp);
+            turn.logf("Vida de %s: %d.", player.getBoldName(), hp);
         }
 
+        log.info("Adding cards to history.");
         attacker.getHistory().add(attackCard);
         if (defenseCard != DefaultDefenseCard.INSTANCE) {
             defender.getHistory().add(defenseCard);
@@ -149,22 +178,32 @@ public class BattleDetails {
                     .map(card -> "**" + card.getName() + "**")
                     .toList();
             var names = Utils.formatCollection(boldCardNames);
+            log.info("Cards {} and {} were sent back to deck.", attackCard.getName(), defenseCard.getName());
             turn.logf("As cartas %s foram enviadas de volta ao deck.", names);
         } else if (deck.contains(attackCard) || deck.contains(defenseCard)) {
             var card = deck.contains(attackCard) ? attackCard : defenseCard;
-            turn.logf("A carta **%s** foi enviada de volta ao deck.", card.getName());
+            var cardName = card.getName();
+            log.info("Card {} was sent back to deck.", cardName);
+            turn.logf("A carta **%s** foi enviada de volta ao deck.", cardName);
         }
 
+        log.info("Removing dead players.");
+        int count = 0;
         var playerIterator = session.getPlayers().iterator();
         while (playerIterator.hasNext()) {
             var player = playerIterator.next();
             if (player.isDead()) {
                 turn.logf("%s morreu!", player.getBoldName());
                 playerIterator.remove();
+                count++;
             }
         }
+        session.recomputeOrderCursor();
+        log.info("{} dead players were removed.", count);
 
         if (attacker.isDead()) {
+            log.info("Player of this turn is dead: {}. Skipping effect card phase.", attacker.getName());
+            turn.endTurn();
             return;
         }
 
@@ -224,6 +263,9 @@ public class BattleDetails {
     public synchronized void resolve() {
         if (resolved.get()) return;
 
+        var playerName = attacker.getName();
+
+        log.info("Executing battle tasks of {}'s turn.", playerName);
         var futures = battleTasks.stream()
                 .map(BattleTask::action)
                 .toArray(CompletableFuture[]::new);
@@ -232,6 +274,7 @@ public class BattleDetails {
             return null;
         }).join();
 
+        log.info("Applying effects on {}'s turn.", playerName);
         for (var entry : effects.entrySet()) {
             var target = entry.getKey();
             for (var effect : entry.getValue()) {
@@ -239,6 +282,7 @@ public class BattleDetails {
             }
         }
 
+        log.info("Calculating hp variations of {}'s turn.", playerName);
         for (var entry : hpVariations.entrySet()) {
             var target = entry.getKey();
             for (var variation : entry.getValue()) {
