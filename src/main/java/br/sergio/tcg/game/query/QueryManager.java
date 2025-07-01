@@ -25,8 +25,10 @@ public class QueryManager {
 
     @SuppressWarnings("unchecked")
     public <T> void complete(Query<T> query, T result) {
+        log.info("Completing query {} for {}", query.getClass().getName(), query.target().getName());
         var callback = callbacks.remove(query);
         if (callback != null) {
+            log.info("Calling query {} callback to {}", query.getClass().getName(), query.target().getName());
             ((QueryCallback<? super Query<T>, T>) callback).onResult(query, result);
         } else {
             log.warn("No callback found for query: {}", query);

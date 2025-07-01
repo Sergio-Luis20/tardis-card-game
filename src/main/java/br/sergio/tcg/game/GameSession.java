@@ -373,7 +373,7 @@ public class GameSession {
                 if (lastTimeAttacked.get(player)) {
                     log.info("{} drawn a card.", player.getName());
                     lastTimeAttacked.put(player, false);
-                    logf("%s não possui cartas de ataque, portanto em seu turno ele obrigatoriamente comprou uma carta.");
+                    logf("%s não possui cartas de ataque, portanto em seu turno ele obrigatoriamente comprou uma carta.", player.getBoldName());
                     currentTurn = TurnDetails.pacific(this, player);
                     currentTurn.startTurn();
                 } else {

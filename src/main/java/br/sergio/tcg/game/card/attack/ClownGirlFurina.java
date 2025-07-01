@@ -58,6 +58,11 @@ public class ClownGirlFurina extends AttackCard implements ClownGirlCard {
         }
 
         @Override
+        public boolean permitsDuplicate() {
+            return false;
+        }
+
+        @Override
         public void tick() {
             var cards = new ArrayList<>(attacker.getHand());
             cards.removeAll(revealedCards);

@@ -1,5 +1,6 @@
 package br.sergio.tcg.game.query.queries;
 
+import br.sergio.tcg.Main;
 import br.sergio.tcg.Utils;
 import br.sergio.tcg.discord.DiscordService;
 import br.sergio.tcg.game.GameSession;
@@ -66,14 +67,14 @@ public record InputNumberQuery<T extends Number>(Player target, String prompt, b
         } else {
             channelConsumer.accept(session.getGameChannel());
         }
-        future.whenComplete((result, throwable) -> {
+        future.whenCompleteAsync((result, throwable) -> {
             if (throwable != null) {
                 log.error("Query failed for {}", target.getName(), throwable);
                 queryManager.completeExceptionally(this, throwable);
             } else {
                 queryManager.complete(this, result);
             }
-        });
+        }, Main.VIRTUAL);
     }
 
     @Builder
@@ -90,6 +91,7 @@ public record InputNumberQuery<T extends Number>(Player target, String prompt, b
         public void onButtonInteraction(ButtonInteractionEvent event) {
             try {
                 if (!event.getComponentId().equals(interactionId + ":input")) {
+                    log.warn("InputNumberQuery: received button event that is not for the interaction id {}", interactionId);
                     return;
                 }
                 if (!event.getUser().equals(player.getMember().getUser())) {
@@ -105,6 +107,7 @@ public record InputNumberQuery<T extends Number>(Player target, String prompt, b
                         .build();
                 event.replyModal(modal).queue();
             } catch (Exception e) {
+                event.reply("Erro interno").setEphemeral(true).queue();
                 completeWithException(e);
             }
         }

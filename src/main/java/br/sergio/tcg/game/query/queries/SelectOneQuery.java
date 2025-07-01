@@ -1,5 +1,6 @@
 package br.sergio.tcg.game.query.queries;
 
+import br.sergio.tcg.Main;
 import br.sergio.tcg.Utils;
 import br.sergio.tcg.discord.DiscordService;
 import br.sergio.tcg.game.GameSession;
@@ -97,14 +98,14 @@ public record SelectOneQuery<T>(
             } else {
                 channelConsumer.accept(session.getGameChannel());
             }
-            future.whenComplete((result, throwable) -> {
+            future.whenCompleteAsync((result, throwable) -> {
                 if (throwable != null) {
                     log.error("Query failed for {}", target.getName(), throwable);
                     queryManager.completeExceptionally(this, throwable);
                 } else {
                     queryManager.complete(this, result);
                 }
-            });
+            }, Main.VIRTUAL);
         }
     }
 
@@ -127,6 +128,7 @@ public record SelectOneQuery<T>(
             try {
                 String[] parts = event.getComponentId().split(":");
                 if (parts.length != 2 || !parts[0].equals(interactionId)) {
+                    log.warn("SelectOneQuery: received button event that is not for the interaction id {}", interactionId);
                     return;
                 }
                 if (!event.getUser().equals(player.getMember().getUser())) {

@@ -58,7 +58,7 @@ public class BileuMisera extends EffectCard {
             if (damaged) {
                 int damage = (int) this.damage.calculate();
                 target.addHp(damage);
-                session.logf("%s tomou %d de dano por hipertensão!", target.getBoldName());
+                session.logf("%s tomou %d de dano por hipertensão!", target.getBoldName(), damage);
             } else {
                 int heal = (int) this.heal.calculate();
                 target.addHp(heal);

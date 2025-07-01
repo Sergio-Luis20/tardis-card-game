@@ -1,5 +1,6 @@
 package br.sergio.tcg.game.query.queries;
 
+import br.sergio.tcg.Main;
 import br.sergio.tcg.Utils;
 import br.sergio.tcg.discord.DiscordService;
 import br.sergio.tcg.game.GameSession;
@@ -15,7 +16,6 @@ import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -101,14 +101,14 @@ public record SelectManyQuery<T>(
             } else {
                 channelConsumer.accept(session.getGameChannel());
             }
-            future.whenComplete((result, throwable) -> {
+            future.whenCompleteAsync((result, throwable) -> {
                 if (throwable != null) {
                     log.error("Query failed for {}", target.getName(), throwable);
                     queryManager.completeExceptionally(this, throwable);
                 } else {
                     queryManager.complete(this, result);
                 }
-            });
+            }, Main.VIRTUAL);
         }
     }
 
@@ -127,11 +127,12 @@ public record SelectManyQuery<T>(
         private CompletableFuture<List<T>> future;
 
         @Override
-        public void onButtonInteraction(@NotNull ButtonInteractionEvent event) {
+        public void onButtonInteraction(ButtonInteractionEvent event) {
             Exception ex = null;
             try {
                 String[] parts = event.getComponentId().split(":");
                 if (parts.length != 2 || !parts[0].equals(interactionId)) {
+                    log.warn("SelectManyQuery: received button event that is not for the interaction id {}", interactionId);
                     return;
                 }
                 if (!event.getUser().equals(player.getMember().getUser())) {

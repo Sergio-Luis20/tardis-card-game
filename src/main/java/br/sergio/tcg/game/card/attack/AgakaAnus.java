@@ -2,14 +2,14 @@ package br.sergio.tcg.game.card.attack;
 
 import br.sergio.tcg.discord.DiscordService;
 import br.sergio.tcg.game.TurnDetails;
-import br.sergio.tcg.game.card.EffectCard;
+import br.sergio.tcg.game.card.AttackCard;
 import br.sergio.tcg.game.card.Rarity;
 import br.sergio.tcg.game.query.queries.SelectOneQuery;
 
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 
-public class AgakaAnus extends EffectCard {
+public class AgakaAnus extends AttackCard {
 
     public AgakaAnus() {
         super("Cu do Agaka", Rarity.LEGENDARY, "Pode enviar uma carta inimiga direto " +
